@@ -9,12 +9,21 @@ struct ContentView: View {
     @State private var isShowingEditFolderAlert = false
     @State private var newFolderName = ""
     @State private var editedFolderName = ""
+    @State private var searchText = ""
     @State private var folderBeingEdited: Folder?
 
     private var rootFolders: [Folder] {
         folders
             .filter { $0.parent == nil }
             .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private var filteredFolders: [Folder] {
+        guard !searchText.isEmpty else { return rootFolders }
+
+        return rootFolders.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
     }
 
     var body: some View {
@@ -26,9 +35,11 @@ struct ContentView: View {
                         systemImage: "folder",
                         description: Text("Tap the + button to create your first folder.")
                     )
+                } else if filteredFolders.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
-                        ForEach(rootFolders) { folder in
+                        ForEach(filteredFolders) { folder in
                             NavigationLink {
                                 FolderDetailView(folder: folder)
                             } label: {
@@ -100,6 +111,7 @@ struct ContentView: View {
             } message: {
                 Text("Update the folder name.")
             }
+            .searchable(text: $searchText, prompt: "Search folders")
         }
     }
 

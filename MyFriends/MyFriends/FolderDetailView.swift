@@ -11,6 +11,7 @@ struct FolderDetailView: View {
     @State private var isShowingContactSheet = false
     @State private var newSubfolderName = ""
     @State private var editedFolderName = ""
+    @State private var searchText = ""
     @State private var contactName = ""
     @State private var contactPhoneNumber = ""
     @State private var contactBeingEdited: FriendContact?
@@ -24,13 +25,29 @@ struct FolderDetailView: View {
         folder.contacts.sorted { $0.createdAt < $1.createdAt }
     }
 
+    private var filteredSubfolders: [Folder] {
+        guard !searchText.isEmpty else { return subfolders }
+
+        return subfolders.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
+    private var filteredContacts: [FriendContact] {
+        guard !searchText.isEmpty else { return contacts }
+
+        return contacts.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+
     var body: some View {
         List {
             Section("Subfolders") {
-                if subfolders.isEmpty {
-                    sectionPlaceholder("No subfolders yet")
+                if filteredSubfolders.isEmpty {
+                    sectionPlaceholder(subfolderPlaceholderText)
                 } else {
-                    ForEach(subfolders) { subfolder in
+                    ForEach(filteredSubfolders) { subfolder in
                         NavigationLink {
                             FolderDetailView(folder: subfolder)
                         } label: {
@@ -63,10 +80,10 @@ struct FolderDetailView: View {
             }
 
             Section("Contacts") {
-                if contacts.isEmpty {
-                    sectionPlaceholder("No contacts yet")
+                if filteredContacts.isEmpty {
+                    sectionPlaceholder(contactPlaceholderText)
                 } else {
-                    ForEach(contacts) { contact in
+                    ForEach(filteredContacts) { contact in
                         NavigationLink {
                             ContactDetailView(contact: contact)
                         } label: {
@@ -103,6 +120,7 @@ struct FolderDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(folder.name)
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $searchText, prompt: "Search subfolders and contacts")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -208,6 +226,22 @@ struct FolderDetailView: View {
 
     private var contactSheetActionTitle: String {
         contactBeingEdited == nil ? "Save" : "Update"
+    }
+
+    private var subfolderPlaceholderText: String {
+        if subfolders.isEmpty {
+            return "No subfolders yet"
+        }
+
+        return "No matching subfolders"
+    }
+
+    private var contactPlaceholderText: String {
+        if contacts.isEmpty {
+            return "No contacts yet"
+        }
+
+        return "No matching contacts"
     }
 
     @ViewBuilder
