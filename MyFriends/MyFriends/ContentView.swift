@@ -1,80 +1,82 @@
-//
-//  ContentView.swift
-//  MyFriends
-//
-//  Created by harrysocool on 2026-04-04.
-//
-
 import SwiftUI
 import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \Folder.createdAt) private var folders: [Folder]
+
+    @State private var isShowingAddFolderAlert = false
+    @State private var newFolderName = ""
 
     var body: some View {
-        NavigationViewWrapper {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationStack {
+            Group {
+                if folders.isEmpty {
+                    ContentUnavailableView(
+                        "No Folders Yet",
+                        systemImage: "folder",
+                        description: Text("Tap the + button to create your first folder.")
+                    )
+                } else {
+                    List(folders) { folder in
+                        HStack(spacing: 12) {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(.blue)
+
+                            Text(folder.name)
+                                .font(.body)
+                        }
+                        .padding(.vertical, 4)
                     }
+                    .listStyle(.plain)
                 }
-                .onDelete(perform: deleteItems)
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
+            .navigationTitle("MyFriends")
             .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        newFolderName = ""
+                        isShowingAddFolderAlert = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
                 }
             }
-        }
-    }
+            .alert("New Folder", isPresented: $isShowingAddFolderAlert) {
+                TextField("Folder name", text: $newFolderName)
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
+                Button("Cancel", role: .cancel) {
+                    newFolderName = ""
+                }
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+                Button("Save") {
+                    addFolder()
+                }
+                .disabled(trimmedFolderName.isEmpty)
+            } message: {
+                Text("Enter a name for the folder.")
             }
         }
     }
-}
 
-fileprivate struct NavigationViewWrapper<Content: View>: View {
-    let content: () -> Content
+    private var trimmedFolderName: String {
+        newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-    var body: some View {
-#if os(macOS)
-        NavigationSplitView {
-            content()
-        } detail: {
-            Text("Select an item")
+    private func addFolder() {
+        let folder = Folder(name: trimmedFolderName)
+        modelContext.insert(folder)
+
+        do {
+            try modelContext.save()
+            newFolderName = ""
+        } catch {
+            print("Failed to save folder: \(error)")
         }
-#else
-        content()
-#endif
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: Folder.self, inMemory: true)
 }

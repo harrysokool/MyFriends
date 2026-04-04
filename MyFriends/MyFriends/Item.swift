@@ -9,6 +9,17 @@ import Foundation
 import SwiftData
 
 @Model
+final class Folder {
+    var name: String
+    var createdAt: Date
+
+    init(name: String, createdAt: Date = .now) {
+        self.name = name
+        self.createdAt = createdAt
+    }
+}
+
+@Model
 final class Item {
     var timestamp: Date
     
