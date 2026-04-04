@@ -112,6 +112,13 @@ struct ContactDetailView: View {
                             TextField("Phone Number", text: $phoneNumber)
                                 .keyboardType(.phonePad)
                         }
+
+                        if let phoneValidationMessage {
+                            Text(phoneValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+
                         TextField("Email", text: $email)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
@@ -140,7 +147,7 @@ struct ContactDetailView: View {
                         Button("Save") {
                             saveContact()
                         }
-                        .disabled(trimmedContactName.isEmpty || trimmedPhoneNumber.isEmpty)
+                        .disabled(!canSaveContact)
                     }
                 }
             }
@@ -157,7 +164,7 @@ struct ContactDetailView: View {
     }
 
     private var trimmedPhoneNumber: String {
-        phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        PhoneNumberValidator.normalizedInput(phoneNumber)
     }
 
     private var trimmedEmail: String {
@@ -170,6 +177,14 @@ struct ContactDetailView: View {
 
     private var trimmedNotes: String {
         notes.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var phoneValidationMessage: String? {
+        PhoneNumberValidator.validationMessage(for: phoneNumber)
+    }
+
+    private var canSaveContact: Bool {
+        !trimmedContactName.isEmpty && phoneValidationMessage == nil
     }
 
     private var callablePhoneNumber: String? {
@@ -216,7 +231,10 @@ struct ContactDetailView: View {
         contact.name = trimmedContactName
         contact.phoneRegionCode = selectedCountry.regionCode
         contact.phoneDialingCode = selectedCountry.dialingCode
-        contact.phoneNumber = trimmedPhoneNumber
+        contact.phoneNumber = PhoneNumberValidator.storageValue(
+            from: trimmedPhoneNumber,
+            dialingCode: selectedCountry.dialingCode
+        )
         contact.email = optionalValue(from: trimmedEmail)
         contact.instagram = optionalValue(from: trimmedInstagram)
         contact.notes = optionalValue(from: trimmedNotes)

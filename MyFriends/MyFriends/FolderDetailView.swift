@@ -225,6 +225,13 @@ struct FolderDetailView: View {
                             TextField("Phone Number", text: $contactPhoneNumber)
                                 .keyboardType(.phonePad)
                         }
+
+                        if let phoneValidationMessage {
+                            Text(phoneValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+
                         TextField("Email", text: $contactEmail)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
@@ -253,7 +260,7 @@ struct FolderDetailView: View {
                         Button(contactSheetActionTitle) {
                             saveContact()
                         }
-                        .disabled(trimmedContactName.isEmpty || trimmedPhoneNumber.isEmpty)
+                        .disabled(!canSaveContact)
                     }
                 }
             }
@@ -278,7 +285,7 @@ struct FolderDetailView: View {
     }
 
     private var trimmedPhoneNumber: String {
-        contactPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        PhoneNumberValidator.normalizedInput(contactPhoneNumber)
     }
 
     private var trimmedEmail: String {
@@ -299,6 +306,14 @@ struct FolderDetailView: View {
 
     private var contactSheetActionTitle: String {
         contactBeingEdited == nil ? "Save" : "Update"
+    }
+
+    private var phoneValidationMessage: String? {
+        PhoneNumberValidator.validationMessage(for: contactPhoneNumber)
+    }
+
+    private var canSaveContact: Bool {
+        !trimmedContactName.isEmpty && phoneValidationMessage == nil
     }
 
     private var subfolderPlaceholderText: String {
@@ -387,7 +402,10 @@ struct FolderDetailView: View {
     private func saveContact() {
         if let contactBeingEdited {
             contactBeingEdited.name = trimmedContactName
-            contactBeingEdited.phoneNumber = trimmedPhoneNumber
+            contactBeingEdited.phoneNumber = PhoneNumberValidator.storageValue(
+                from: trimmedPhoneNumber,
+                dialingCode: selectedCountry.dialingCode
+            )
             contactBeingEdited.phoneRegionCode = selectedCountry.regionCode
             contactBeingEdited.phoneDialingCode = selectedCountry.dialingCode
             contactBeingEdited.email = optionalValue(from: trimmedEmail)
@@ -396,7 +414,10 @@ struct FolderDetailView: View {
         } else {
             let contact = FriendContact(
                 name: trimmedContactName,
-                phoneNumber: trimmedPhoneNumber,
+                phoneNumber: PhoneNumberValidator.storageValue(
+                    from: trimmedPhoneNumber,
+                    dialingCode: selectedCountry.dialingCode
+                ),
                 phoneRegionCode: selectedCountry.regionCode,
                 phoneDialingCode: selectedCountry.dialingCode,
                 email: optionalValue(from: trimmedEmail),

@@ -30,3 +30,53 @@ struct PhoneCountry: Identifiable, Hashable {
         all.first(where: { $0.regionCode == regionCode }) ?? defaultCountry
     }
 }
+
+enum PhoneNumberValidator {
+    private static let allowedCharacters = CharacterSet(charactersIn: "+0123456789 -()")
+
+    static func normalizedInput(_ input: String) -> String {
+        input
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    }
+
+    static func validationMessage(for input: String) -> String? {
+        let normalized = normalizedInput(input)
+
+        guard !normalized.isEmpty else {
+            return "Enter a phone number."
+        }
+
+        if normalized.unicodeScalars.contains(where: { !allowedCharacters.contains($0) }) {
+            return "Use only digits, spaces, hyphens, parentheses, or a leading +."
+        }
+
+        let plusCount = normalized.filter { $0 == "+" }.count
+        if plusCount > 1 || (plusCount == 1 && !normalized.hasPrefix("+")) {
+            return "The + sign is only allowed at the beginning."
+        }
+
+        let digitCount = digitsOnly(from: normalized).count
+        if digitCount < 7 || digitCount > 15 {
+            return "Phone numbers should contain 7 to 15 digits."
+        }
+
+        return nil
+    }
+
+    static func storageValue(from input: String, dialingCode: String) -> String {
+        let normalized = normalizedInput(input)
+        let digits = digitsOnly(from: normalized)
+        let dialingDigits = digitsOnly(from: dialingCode)
+
+        if normalized.hasPrefix("+"), digits.hasPrefix(dialingDigits), digits.count > dialingDigits.count {
+            return String(digits.dropFirst(dialingDigits.count))
+        }
+
+        return digits
+    }
+
+    static func digitsOnly(from input: String) -> String {
+        input.filter(\.isNumber)
+    }
+}
