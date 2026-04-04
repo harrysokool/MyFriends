@@ -123,6 +123,55 @@ Result:
 
 ---
 
+### 4.7 Editing and Deletion
+Prompt:
+> Add support for deleting and editing folders and contacts.
+
+Result:
+- Added swipe-to-delete for root folders
+- Added swipe-to-delete for subfolders
+- Added swipe-to-delete for contacts
+- Added simple folder renaming via alert
+- Added simple contact editing via sheet
+- Folder deletion cascades through nested contents using SwiftData relationships
+
+---
+
+### 4.8 Search
+Prompt:
+> Add search functionality to the MyFriends app.
+
+Result:
+- Added live folder search on the main screen
+- Added live subfolder and contact search in FolderDetailView
+- Search updates as the user types
+- Empty search shows the normal full list
+
+---
+
+### 4.9 Native Search Bar Placement
+Prompt:
+> Fix the search bar placement to match native iOS behavior.
+
+Result:
+- Updated both screens to use SwiftUI `searchable` with `navigationBarDrawer`
+- Search bars are hidden initially
+- Search bars appear when the user pulls down, matching native iOS behavior
+
+---
+
+### 4.10 List UI Polish
+Prompt:
+> Improve the UI of folder and contact lists to make the app feel more polished.
+
+Result:
+- Added clearer folder and contact icons
+- Improved spacing and alignment in list rows
+- Made folder rows and contact rows visually distinct
+- Kept styling subtle and consistent with iOS conventions
+
+---
+
 ## 5. Git Strategy
 
 - Commit only after working features
@@ -152,22 +201,28 @@ The app currently supports:
 - Nested folders
 - Adding contacts to folders
 - Viewing contact details
+- Editing folders
+- Editing contacts
+- Deleting folders, subfolders, and contacts
+- Search on root folders
+- Search inside folders for subfolders and contacts
+- Native pull-down search bar placement
 - SwiftData persistence for folders, subfolders, and contacts
 - Empty states when a folder has no subfolders or contacts
-- Simple sectioned folder detail UI with add actions for subfolders and contacts
+- Sectioned folder detail UI with add actions for subfolders and contacts
+- More polished folder and contact list rows with clearer visual distinction
 
 ---
 
 ## 8. Next Steps
 
 Planned features:
-- Edit and delete folders
-- Edit and delete contacts
-- Better UI polish
-- Search functionality
 - Possibly notes or tags for contacts
 - Validation and formatting for phone numbers
 - Move `Item` starter model cleanup if no longer needed
+- Confirmation dialogs for destructive folder deletion
+- Additional detail fields for contacts
+- Broader testing coverage
 
 ---
 
@@ -176,12 +231,18 @@ Planned features:
 - `Folder` uses a self-referential SwiftData relationship for nested subfolders
 - `FriendContact` belongs to a single folder through SwiftData relationships
 - `ContentView` shows only root folders
+- `ContentView` supports folder search and swipe edit/delete
 - `FolderDetailView` supports:
   - Viewing subfolders
   - Viewing contacts
   - Creating subfolders via alert
   - Creating contacts via sheet
-- `ContactDetailView` is currently read-only
+  - Searching subfolders and contacts
+  - Editing and deleting subfolders
+  - Editing and deleting contacts
+- `ContactDetailView` supports viewing and editing a contact
+- Search uses in-memory filtering with SwiftUI `searchable`
+- Folder and contact deletion is persisted through SwiftData and reflected immediately in the UI
 
 ---
 
@@ -189,5 +250,6 @@ Planned features:
 
 - Repeatedly verified changes using `xcodebuild`
 - Current implemented features compile successfully in the iOS simulator build target
+- Latest verified areas include editing, deletion, search, native search placement, and row UI polish
 
 ---

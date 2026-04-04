@@ -14,6 +14,9 @@ struct FolderDetailView: View {
     @State private var searchText = ""
     @State private var contactName = ""
     @State private var contactPhoneNumber = ""
+    @State private var contactEmail = ""
+    @State private var contactInstagram = ""
+    @State private var contactNotes = ""
     @State private var contactBeingEdited: FriendContact?
     @State private var folderBeingEdited: Folder?
 
@@ -202,10 +205,22 @@ struct FolderDetailView: View {
         .sheet(isPresented: $isShowingContactSheet) {
             NavigationStack {
                 Form {
-                    Section {
+                    Section("Contact Info") {
                         TextField("Name", text: $contactName)
                         TextField("Phone Number", text: $contactPhoneNumber)
                             .keyboardType(.phonePad)
+                        TextField("Email", text: $contactEmail)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        TextField("Instagram", text: $contactInstagram)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    }
+
+                    Section("Notes") {
+                        TextField("Notes", text: $contactNotes, axis: .vertical)
+                            .lineLimit(3...6)
                     }
                 }
                 .navigationTitle(contactSheetTitle)
@@ -244,6 +259,18 @@ struct FolderDetailView: View {
 
     private var trimmedPhoneNumber: String {
         contactPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedEmail: String {
+        contactEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedInstagram: String {
+        contactInstagram.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedNotes: String {
+        contactNotes.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var contactSheetTitle: String {
@@ -330,6 +357,9 @@ struct FolderDetailView: View {
         contactBeingEdited = contact
         contactName = contact.name
         contactPhoneNumber = contact.phoneNumber
+        contactEmail = contact.email ?? ""
+        contactInstagram = contact.instagram ?? ""
+        contactNotes = contact.notes ?? ""
         isShowingContactSheet = true
     }
 
@@ -337,10 +367,16 @@ struct FolderDetailView: View {
         if let contactBeingEdited {
             contactBeingEdited.name = trimmedContactName
             contactBeingEdited.phoneNumber = trimmedPhoneNumber
+            contactBeingEdited.email = optionalValue(from: trimmedEmail)
+            contactBeingEdited.instagram = optionalValue(from: trimmedInstagram)
+            contactBeingEdited.notes = optionalValue(from: trimmedNotes)
         } else {
             let contact = FriendContact(
                 name: trimmedContactName,
                 phoneNumber: trimmedPhoneNumber,
+                email: optionalValue(from: trimmedEmail),
+                instagram: optionalValue(from: trimmedInstagram),
+                notes: optionalValue(from: trimmedNotes),
                 folder: folder
             )
             modelContext.insert(contact)
@@ -374,6 +410,13 @@ struct FolderDetailView: View {
     private func resetContactFields() {
         contactName = ""
         contactPhoneNumber = ""
+        contactEmail = ""
+        contactInstagram = ""
+        contactNotes = ""
+    }
+
+    private func optionalValue(from value: String) -> String? {
+        value.isEmpty ? nil : value
     }
 }
 

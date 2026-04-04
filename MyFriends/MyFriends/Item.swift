@@ -31,17 +31,26 @@ final class Folder {
 final class FriendContact {
     var name: String
     var phoneNumber: String
+    var email: String?
+    var instagram: String?
+    var notes: String?
     var createdAt: Date
     var folder: Folder?
 
     init(
         name: String,
         phoneNumber: String,
+        email: String? = nil,
+        instagram: String? = nil,
+        notes: String? = nil,
         createdAt: Date = .now,
         folder: Folder? = nil
     ) {
         self.name = name
         self.phoneNumber = phoneNumber
+        self.email = email
+        self.instagram = instagram
+        self.notes = notes
         self.createdAt = createdAt
         self.folder = folder
     }
