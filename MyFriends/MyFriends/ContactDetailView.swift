@@ -204,13 +204,7 @@ struct ContactDetailView: View {
     }
 
     private func saveContact() {
-        contact.name = contactForm.trimmedName
-        contact.phoneRegionCode = contactForm.selectedCountry.regionCode
-        contact.phoneDialingCode = contactForm.selectedCountry.dialingCode
-        contact.phoneNumber = contactForm.storedPhoneNumber
-        contact.email = contactForm.optionalValue(contactForm.trimmedEmail)
-        contact.instagram = contactForm.optionalValue(contactForm.trimmedInstagram)
-        contact.notes = contactForm.optionalValue(contactForm.trimmedNotes)
+        ContactPersistenceService.apply(contactForm, to: contact)
 
         do {
             try modelContext.save()

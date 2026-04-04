@@ -301,24 +301,9 @@ struct FolderDetailView: View {
 
     private func saveContact() {
         if let contactBeingEdited {
-            contactBeingEdited.name = contactForm.trimmedName
-            contactBeingEdited.phoneNumber = contactForm.storedPhoneNumber
-            contactBeingEdited.phoneRegionCode = contactForm.selectedCountry.regionCode
-            contactBeingEdited.phoneDialingCode = contactForm.selectedCountry.dialingCode
-            contactBeingEdited.email = contactForm.optionalValue(contactForm.trimmedEmail)
-            contactBeingEdited.instagram = contactForm.optionalValue(contactForm.trimmedInstagram)
-            contactBeingEdited.notes = contactForm.optionalValue(contactForm.trimmedNotes)
+            ContactPersistenceService.apply(contactForm, to: contactBeingEdited)
         } else {
-            let contact = FriendContact(
-                name: contactForm.trimmedName,
-                phoneNumber: contactForm.storedPhoneNumber,
-                phoneRegionCode: contactForm.selectedCountry.regionCode,
-                phoneDialingCode: contactForm.selectedCountry.dialingCode,
-                email: contactForm.optionalValue(contactForm.trimmedEmail),
-                instagram: contactForm.optionalValue(contactForm.trimmedInstagram),
-                notes: contactForm.optionalValue(contactForm.trimmedNotes),
-                folder: folder
-            )
+            let contact = ContactPersistenceService.makeContact(from: contactForm, in: folder)
             modelContext.insert(contact)
         }
 
