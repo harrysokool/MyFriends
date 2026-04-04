@@ -6,7 +6,10 @@ struct ContentView: View {
     @Query(sort: \Folder.createdAt) private var folders: [Folder]
 
     @State private var isShowingAddFolderAlert = false
+    @State private var isShowingEditFolderAlert = false
     @State private var newFolderName = ""
+    @State private var editedFolderName = ""
+    @State private var folderBeingEdited: Folder?
 
     private var rootFolders: [Folder] {
         folders
@@ -24,18 +27,35 @@ struct ContentView: View {
                         description: Text("Tap the + button to create your first folder.")
                     )
                 } else {
-                    List(rootFolders) { folder in
-                        NavigationLink {
-                            FolderDetailView(folder: folder)
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(.blue)
+                    List {
+                        ForEach(rootFolders) { folder in
+                            NavigationLink {
+                                FolderDetailView(folder: folder)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(.blue)
 
-                                Text(folder.name)
-                                    .font(.body)
+                                    Text(folder.name)
+                                        .font(.body)
+                                }
+                                .padding(.vertical, 4)
                             }
-                            .padding(.vertical, 4)
+                            .swipeActions {
+                                Button(role: .destructive) {
+                                    deleteFolder(folder)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    startEditing(folder)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
                         }
                     }
                     .listStyle(.plain)
@@ -66,11 +86,29 @@ struct ContentView: View {
             } message: {
                 Text("Enter a name for the folder.")
             }
+            .alert("Edit Folder", isPresented: $isShowingEditFolderAlert) {
+                TextField("Folder name", text: $editedFolderName)
+
+                Button("Cancel", role: .cancel) {
+                    resetFolderEditing()
+                }
+
+                Button("Save") {
+                    saveFolderEdits()
+                }
+                .disabled(trimmedEditedFolderName.isEmpty)
+            } message: {
+                Text("Update the folder name.")
+            }
         }
     }
 
     private var trimmedFolderName: String {
         newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedEditedFolderName: String {
+        editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func addFolder() {
@@ -83,6 +121,40 @@ struct ContentView: View {
         } catch {
             print("Failed to save folder: \(error)")
         }
+    }
+
+    private func startEditing(_ folder: Folder) {
+        folderBeingEdited = folder
+        editedFolderName = folder.name
+        isShowingEditFolderAlert = true
+    }
+
+    private func saveFolderEdits() {
+        guard let folderBeingEdited else { return }
+
+        folderBeingEdited.name = trimmedEditedFolderName
+
+        do {
+            try modelContext.save()
+            resetFolderEditing()
+        } catch {
+            print("Failed to update folder: \(error)")
+        }
+    }
+
+    private func deleteFolder(_ folder: Folder) {
+        modelContext.delete(folder)
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete folder: \(error)")
+        }
+    }
+
+    private func resetFolderEditing() {
+        folderBeingEdited = nil
+        editedFolderName = ""
     }
 }
 

@@ -7,10 +7,14 @@ struct FolderDetailView: View {
     let folder: Folder
 
     @State private var isShowingAddSubfolderAlert = false
-    @State private var isShowingAddContactSheet = false
+    @State private var isShowingEditFolderAlert = false
+    @State private var isShowingContactSheet = false
     @State private var newSubfolderName = ""
-    @State private var newContactName = ""
-    @State private var newContactPhoneNumber = ""
+    @State private var editedFolderName = ""
+    @State private var contactName = ""
+    @State private var contactPhoneNumber = ""
+    @State private var contactBeingEdited: FriendContact?
+    @State private var folderBeingEdited: Folder?
 
     private var subfolders: [Folder] {
         folder.childFolders.sorted { $0.createdAt < $1.createdAt }
@@ -56,6 +60,21 @@ struct FolderDetailView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
+                                .swipeActions {
+                                    Button(role: .destructive) {
+                                        deleteFolder(subfolder)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        startEditing(folder: subfolder)
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
                             }
                         }
                     }
@@ -77,6 +96,21 @@ struct FolderDetailView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
+                                .swipeActions {
+                                    Button(role: .destructive) {
+                                        deleteContact(contact)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        startEditing(contact: contact)
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
                             }
                         }
                     }
@@ -88,6 +122,14 @@ struct FolderDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    startEditing(folder: folder)
+                } label: {
+                    Image(systemName: "pencil")
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("New Subfolder", systemImage: "folder.badge.plus") {
                         newSubfolderName = ""
@@ -95,9 +137,7 @@ struct FolderDetailView: View {
                     }
 
                     Button("New Contact", systemImage: "person.badge.plus") {
-                        newContactName = ""
-                        newContactPhoneNumber = ""
-                        isShowingAddContactSheet = true
+                        startAddingContact()
                     }
                 } label: {
                     Image(systemName: "plus")
@@ -118,28 +158,42 @@ struct FolderDetailView: View {
         } message: {
             Text("Enter a name for the subfolder.")
         }
-        .sheet(isPresented: $isShowingAddContactSheet) {
+        .alert("Edit Folder", isPresented: $isShowingEditFolderAlert) {
+            TextField("Folder name", text: $editedFolderName)
+
+            Button("Cancel", role: .cancel) {
+                resetFolderEditing()
+            }
+
+            Button("Save") {
+                saveFolderEdits()
+            }
+            .disabled(trimmedEditedFolderName.isEmpty)
+        } message: {
+            Text("Update the folder name.")
+        }
+        .sheet(isPresented: $isShowingContactSheet) {
             NavigationStack {
                 Form {
                     Section {
-                        TextField("Name", text: $newContactName)
-                        TextField("Phone Number", text: $newContactPhoneNumber)
+                        TextField("Name", text: $contactName)
+                        TextField("Phone Number", text: $contactPhoneNumber)
                             .keyboardType(.phonePad)
                     }
                 }
-                .navigationTitle("New Contact")
+                .navigationTitle(contactSheetTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Cancel") {
                             resetContactFields()
-                            isShowingAddContactSheet = false
+                            isShowingContactSheet = false
                         }
                     }
 
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Save") {
-                            addContact()
+                        Button(contactSheetActionTitle) {
+                            saveContact()
                         }
                         .disabled(trimmedContactName.isEmpty || trimmedPhoneNumber.isEmpty)
                     }
@@ -153,12 +207,24 @@ struct FolderDetailView: View {
         newSubfolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var trimmedEditedFolderName: String {
+        editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var trimmedContactName: String {
-        newContactName.trimmingCharacters(in: .whitespacesAndNewlines)
+        contactName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var trimmedPhoneNumber: String {
-        newContactPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        contactPhoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var contactSheetTitle: String {
+        contactBeingEdited == nil ? "New Contact" : "Edit Contact"
+    }
+
+    private var contactSheetActionTitle: String {
+        contactBeingEdited == nil ? "Save" : "Update"
     }
 
     private func addSubfolder() {
@@ -173,26 +239,89 @@ struct FolderDetailView: View {
         }
     }
 
-    private func addContact() {
-        let contact = FriendContact(
-            name: trimmedContactName,
-            phoneNumber: trimmedPhoneNumber,
-            folder: folder
-        )
-        modelContext.insert(contact)
+    private func startEditing(folder: Folder) {
+        folderBeingEdited = folder
+        editedFolderName = folder.name
+        isShowingEditFolderAlert = true
+    }
+
+    private func saveFolderEdits() {
+        guard let folderBeingEdited else { return }
+
+        folderBeingEdited.name = trimmedEditedFolderName
+
+        do {
+            try modelContext.save()
+            resetFolderEditing()
+        } catch {
+            print("Failed to update folder: \(error)")
+        }
+    }
+
+    private func deleteFolder(_ folder: Folder) {
+        modelContext.delete(folder)
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete folder: \(error)")
+        }
+    }
+
+    private func startAddingContact() {
+        contactBeingEdited = nil
+        resetContactFields()
+        isShowingContactSheet = true
+    }
+
+    private func startEditing(contact: FriendContact) {
+        contactBeingEdited = contact
+        contactName = contact.name
+        contactPhoneNumber = contact.phoneNumber
+        isShowingContactSheet = true
+    }
+
+    private func saveContact() {
+        if let contactBeingEdited {
+            contactBeingEdited.name = trimmedContactName
+            contactBeingEdited.phoneNumber = trimmedPhoneNumber
+        } else {
+            let contact = FriendContact(
+                name: trimmedContactName,
+                phoneNumber: trimmedPhoneNumber,
+                folder: folder
+            )
+            modelContext.insert(contact)
+        }
 
         do {
             try modelContext.save()
             resetContactFields()
-            isShowingAddContactSheet = false
+            contactBeingEdited = nil
+            isShowingContactSheet = false
         } catch {
             print("Failed to save contact: \(error)")
         }
     }
 
+    private func deleteContact(_ contact: FriendContact) {
+        modelContext.delete(contact)
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to delete contact: \(error)")
+        }
+    }
+
+    private func resetFolderEditing() {
+        folderBeingEdited = nil
+        editedFolderName = ""
+    }
+
     private func resetContactFields() {
-        newContactName = ""
-        newContactPhoneNumber = ""
+        contactName = ""
+        contactPhoneNumber = ""
     }
 }
 
