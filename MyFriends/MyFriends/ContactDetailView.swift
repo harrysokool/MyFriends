@@ -8,8 +8,11 @@ struct ContactDetailView: View {
     let contact: FriendContact
 
     @State private var isShowingEditContactSheet = false
+    @State private var isShowingInteractionSheet = false
     @State private var isShowingCallConfirmation = false
     @State private var contactForm = ContactFormState()
+    @State private var interactionDate = Date()
+    @State private var interactionNote = ""
 
     var body: some View {
         List {
@@ -57,6 +60,8 @@ struct ContactDetailView: View {
                     }
                     .padding(.vertical, 4)
                 }
+
+                interactionSection
             }
         }
         .listStyle(.insetGrouped)
@@ -70,6 +75,14 @@ struct ContactDetailView: View {
                     Image(systemName: contact.resolvedIsFavorite ? "star.fill" : "star")
                 }
                 .tint(contact.resolvedIsFavorite ? .yellow : .primary)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    startEditingInteraction()
+                } label: {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                }
             }
 
             ToolbarItem(placement: .topBarTrailing) {
@@ -113,6 +126,63 @@ struct ContactDetailView: View {
             }
             .presentationDetents([.medium])
         }
+        .sheet(isPresented: $isShowingInteractionSheet) {
+            NavigationStack {
+                Form {
+                    Section("Interaction") {
+                        DatePicker(
+                            "Date",
+                            selection: $interactionDate,
+                            displayedComponents: [.date, .hourAndMinute]
+                        )
+
+                        TextField("Interaction note", text: $interactionNote, axis: .vertical)
+                            .lineLimit(3...6)
+                    }
+                }
+                .navigationTitle("Log Interaction")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancel") {
+                            resetInteractionFields()
+                            isShowingInteractionSheet = false
+                        }
+                    }
+
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Save") {
+                            saveInteraction()
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+    }
+
+    @ViewBuilder
+    private var interactionSection: some View {
+        if let lastInteractedAt = contact.lastInteractedAt {
+            detailRow(title: "Last Interaction", value: lastInteractionFormatter.string(from: lastInteractedAt))
+        }
+
+        if let interactionNote = displayValue(contact.interactionNote) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Interaction Note")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+
+                Text(interactionNote)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var trimmedInteractionNote: String {
+        interactionNote.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var callablePhoneNumber: String? {
@@ -219,6 +289,30 @@ struct ContactDetailView: View {
         contactForm.reset()
     }
 
+    private func startEditingInteraction() {
+        interactionDate = contact.lastInteractedAt ?? .now
+        interactionNote = contact.interactionNote ?? ""
+        isShowingInteractionSheet = true
+    }
+
+    private func saveInteraction() {
+        contact.lastInteractedAt = interactionDate
+        contact.interactionNote = optionalValue(from: trimmedInteractionNote)
+
+        do {
+            try modelContext.save()
+            resetInteractionFields()
+            isShowingInteractionSheet = false
+        } catch {
+            print("Failed to save interaction: \(error)")
+        }
+    }
+
+    private func resetInteractionFields() {
+        interactionDate = .now
+        interactionNote = ""
+    }
+
     @ViewBuilder
     private func detailRow(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -237,6 +331,10 @@ struct ContactDetailView: View {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func optionalValue(from value: String) -> String? {
+        value.isEmpty ? nil : value
     }
 
     private func callContact() {
@@ -273,6 +371,13 @@ struct ContactDetailView: View {
                 openURL(webURL)
             }
         }
+    }
+
+    private var lastInteractionFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
     }
 }
 

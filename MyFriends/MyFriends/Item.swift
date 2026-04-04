@@ -58,6 +58,8 @@ final class FriendContact {
     var email: String?
     var instagram: String?
     var notes: String?
+    var lastInteractedAt: Date?
+    var interactionNote: String?
     var createdAt: Date
     var folder: Folder?
 
@@ -70,6 +72,8 @@ final class FriendContact {
         email: String? = nil,
         instagram: String? = nil,
         notes: String? = nil,
+        lastInteractedAt: Date? = nil,
+        interactionNote: String? = nil,
         createdAt: Date = .now,
         folder: Folder? = nil
     ) {
@@ -81,6 +85,8 @@ final class FriendContact {
         self.email = email
         self.instagram = instagram
         self.notes = notes
+        self.lastInteractedAt = lastInteractedAt
+        self.interactionNote = interactionNote
         self.createdAt = createdAt
         self.folder = folder
     }
