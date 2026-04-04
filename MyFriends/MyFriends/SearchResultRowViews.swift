@@ -56,3 +56,30 @@ struct ContactRowView: View {
         .padding(.vertical, 6)
     }
 }
+
+struct FavoritesRowView: View {
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.yellow)
+                .frame(width: 30, height: 30)
+                .background(Color.yellow.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Favorites")
+                    .font(.body)
+                    .fontWeight(.semibold)
+
+                Text(count == 1 ? "1 contact" : "\(count) contacts")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 6)
+    }
+}

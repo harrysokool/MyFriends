@@ -54,6 +54,7 @@ final class FriendContact {
     var phoneNumber: String
     var phoneRegionCode: String?
     var phoneDialingCode: String?
+    var isFavorite: Bool?
     var email: String?
     var instagram: String?
     var notes: String?
@@ -65,6 +66,7 @@ final class FriendContact {
         phoneNumber: String,
         phoneRegionCode: String = PhoneCountry.defaultCountry.regionCode,
         phoneDialingCode: String = PhoneCountry.defaultCountry.dialingCode,
+        isFavorite: Bool = false,
         email: String? = nil,
         instagram: String? = nil,
         notes: String? = nil,
@@ -75,6 +77,7 @@ final class FriendContact {
         self.phoneNumber = phoneNumber
         self.phoneRegionCode = phoneRegionCode
         self.phoneDialingCode = phoneDialingCode
+        self.isFavorite = isFavorite
         self.email = email
         self.instagram = instagram
         self.notes = notes
@@ -92,6 +95,10 @@ final class FriendContact {
 
     var formattedPhoneNumber: String {
         "\(resolvedPhoneDialingCode) \(phoneNumber)"
+    }
+
+    var resolvedIsFavorite: Bool {
+        isFavorite ?? false
     }
 
     var folderPath: String? {

@@ -70,6 +70,15 @@ struct ContactDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    toggleFavorite()
+                } label: {
+                    Image(systemName: contact.resolvedIsFavorite ? "star.fill" : "star")
+                }
+                .tint(contact.resolvedIsFavorite ? .yellow : .primary)
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     contactName = contact.name
                     contactRegionCode = contact.resolvedPhoneRegionCode
                     phoneNumber = contact.phoneNumber
@@ -340,6 +349,16 @@ struct ContactDetailView: View {
         openURL(url)
     }
 
+    private func toggleFavorite() {
+        contact.isFavorite = !contact.resolvedIsFavorite
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to update favorite status: \(error)")
+        }
+    }
+
     private func openInstagramProfile(username: String) {
         guard
             let appURL = URL(string: "instagram://user?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)"),
@@ -364,6 +383,7 @@ struct ContactDetailView: View {
                 phoneNumber: "555-123-4567",
                 phoneRegionCode: "US",
                 phoneDialingCode: "+1",
+                isFavorite: true,
                 email: "alex@example.com",
                 instagram: "@alex",
                 notes: "Met through work."

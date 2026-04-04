@@ -60,6 +60,12 @@ struct ContentView: View {
             }
     }
 
+    private var favoriteContacts: [FriendContact] {
+        contacts
+            .filter { $0.resolvedIsFavorite }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -73,6 +79,14 @@ struct ContentView: View {
                     )
                 } else {
                     List {
+                        if !favoriteContacts.isEmpty {
+                            NavigationLink {
+                                FavoritesView()
+                            } label: {
+                                FavoritesRowView(count: favoriteContacts.count)
+                            }
+                        }
+
                         ForEach(filteredFolders) { folder in
                             NavigationLink {
                                 FolderDetailView(folder: folder)
