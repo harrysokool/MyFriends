@@ -2,19 +2,26 @@
 
 ## Project Overview
 
-MyFriends is an iOS application for organizing personal contacts with custom folders and nested groups instead of a traditional alphabetical phonebook. The app is designed around a user-defined hierarchy, allowing contacts to be grouped by context such as family, work, school, projects, or communities.
+MyFriends is an iOS application for organizing personal relationships through custom folders and nested groups rather than a traditional alphabetical contact list. Instead of forcing every person into a flat phonebook, the app lets users structure contacts around real-life context such as family, school, work, projects, communities, and social circles.
 
-The current implementation focuses on a clean SwiftUI interface, local-first persistence with SwiftData, and a modular structure that supports incremental feature growth.
+The project is designed as a local-first SwiftUI application with SwiftData-backed persistence, a simple native interface, and an architecture that supports iterative feature growth without losing clarity.
 
 ## Features
 
-- Create top-level folders to organize contacts by category
+- Create and rename top-level folders
 - Create nested subfolders inside any folder
-- Add contacts to a specific folder
-- View subfolders and contacts in a structured folder detail screen
-- Navigate to dedicated detail screens for folders and contacts
-- Persist folders, subfolders, and contacts locally using SwiftData
-- Show clear empty states when a folder has no content
+- Add, edit, and delete contacts inside folders
+- Navigate through a hierarchical folder structure
+- View detailed contact profiles
+- Mark contacts as favorites with a smart-folder style Favorites view
+- Search globally across all folders and contacts in the hierarchy
+- Show full hierarchy paths for global search results
+- Store richer contact information including phone number, email, Instagram, notes, and interaction history
+- Log the last interaction date and an interaction note for a contact
+- Open phone numbers in the Phone app with confirmation
+- Open Instagram profiles in the Instagram app with Safari fallback
+- Validate phone number input with country and dialing code support
+- Persist all data locally using SwiftData
 
 ## Tech Stack
 
@@ -27,32 +34,32 @@ The current implementation focuses on a clean SwiftUI interface, local-first per
 
 ## Architecture
 
-MyFriends uses a lightweight, model-driven architecture centered on two SwiftData models:
+MyFriends is built around two primary SwiftData models:
 
-- `Folder`: Represents a container for organization. A folder can have a parent folder, child folders, and many contacts.
-- `FriendContact`: Represents an individual contact stored inside a specific folder, including name, phone number, and creation timestamp.
+- `Folder`: Represents a node in the hierarchy. A folder can have a parent folder, child folders, and many contacts.
+- `FriendContact`: Represents an individual relationship profile stored in a folder, including core contact info, optional metadata, favorite state, and interaction tracking.
 
-At the UI layer, SwiftUI views map directly to the core navigation flow:
+At a high level, the app is organized into:
 
-- `ContentView` displays root folders
-- `FolderDetailView` displays nested subfolders and contacts for a selected folder
-- `ContactDetailView` displays a single contact
+- Model layer: SwiftData models and derived helpers for hierarchy and display-friendly values
+- View layer: SwiftUI screens for home, folder detail, contact detail, and favorites
+- Shared helpers: Search, contact form state, and contact persistence mapping extracted to reduce duplication
 
-This structure keeps the app simple while supporting hierarchical navigation and future expansion.
+This keeps the app lightweight while still supporting nested navigation, smart-folder behavior, and progressive refactoring toward better maintainability.
 
 ## Development Workflow
 
-Development is performed through an AI-assisted workflow that combines local engineering tools with iterative implementation and review. Feature work is scoped into small, testable increments, implemented in VS Code with OpenAI Codex assistance, then validated in Xcode.
+Development uses a structured AI-assisted workflow combining VS Code, OpenAI Codex, Xcode, and Git-based iteration.
 
 Typical workflow:
 
-1. Define a focused feature or UI requirement
-2. Implement the change with Codex-assisted development
-3. Review generated code and integrate refinements
-4. Build and verify the app with `xcodebuild` and Xcode
-5. Track progress through Git and GitHub
+1. Define a focused product or refactor task
+2. Implement the change through Codex-assisted development in the local codebase
+3. Review the result and tighten structure or behavior where needed
+4. Validate with `xcodebuild` and Xcode
+5. Record progress and continue in small, compile-verified increments
 
-This approach emphasizes speed, traceability, and disciplined iteration rather than ad hoc code generation.
+The AI workflow is used as an engineering accelerator, not a replacement for review or technical judgment. Changes are scoped deliberately and validated locally before being treated as complete.
 
 ## Project Structure
 
@@ -61,7 +68,14 @@ MyFriends/
 ├── MyFriends/
 │   ├── ContentView.swift
 │   ├── FolderDetailView.swift
+│   ├── FolderDetailComponents.swift
+│   ├── FavoritesView.swift
 │   ├── ContactDetailView.swift
+│   ├── ContactFormView.swift
+│   ├── ContactPersistenceService.swift
+│   ├── SearchService.swift
+│   ├── SearchResultRowViews.swift
+│   ├── PhoneCountry.swift
 │   ├── Item.swift
 │   └── MyFriendsApp.swift
 ├── PROJECT_LOG.md
@@ -70,43 +84,50 @@ MyFriends/
 
 Key files:
 
-- `ContentView.swift`: Root folder list and folder creation flow
-- `FolderDetailView.swift`: Subfolder and contact listing, plus add actions
-- `ContactDetailView.swift`: Read-only contact detail screen
+- `ContentView.swift`: Home screen, root folders, favorites entry point, and global search
+- `FolderDetailView.swift`: Folder-level coordination for subfolders, contacts, search, and editing flows
+- `FolderDetailComponents.swift`: Extracted folder detail list sections and empty state UI
+- `FavoritesView.swift`: Smart folder view for favorited contacts
+- `ContactDetailView.swift`: Contact profile, favorite toggle, actions, and interaction logging
+- `ContactFormView.swift`: Reusable create/edit contact form and form state
+- `ContactPersistenceService.swift`: Shared mapping from form state into `FriendContact`
+- `SearchService.swift`: Centralized global search and path-based sorting
 - `Item.swift`: SwiftData models including `Folder` and `FriendContact`
-- `MyFriendsApp.swift`: App entry point and SwiftData model container setup
+- `PhoneCountry.swift`: Country/dialing code data and phone number validation helpers
 
 ## Current Status
 
-The project currently supports the core navigation and data model required for hierarchical contact organization:
+The app is functional as a local-first relationship organizer with:
 
-- Root folder creation
-- Nested subfolder creation
-- Contact creation within folders
-- Folder and contact detail navigation
-- Local persistence with SwiftData
+- Hierarchical folders and subfolders
+- Contact creation, editing, and deletion
+- Global search across the full folder tree
+- Favorites as a smart folder
+- Richer contact profiles with notes, Instagram, and interaction tracking
+- Native-style contact actions for phone and Instagram
+- Ongoing maintainability improvements through targeted refactors
 
-The application is functional as an early-stage product foundation and is being developed incrementally with compile-verified changes.
+The project has moved beyond a basic prototype and now demonstrates both product functionality and incremental architectural cleanup.
 
 ## Future Improvements
 
-- Edit and delete support for folders and contacts
-- Search across folders and contacts
-- Input validation and phone number formatting
-- Improved visual polish and list interactions
-- Additional contact metadata such as notes, tags, or profile details
-- Broader test coverage and stronger model-level validation
+- Extract more business logic out of large view coordinators
+- Add stronger user-facing error handling for persistence failures
+- Add tests for search, contact mapping, and interaction behavior
+- Remove or replace the leftover starter `Item` model if no longer needed
+- Add confirmation flows for destructive actions where appropriate
+- Explore tags, reminders, or lightweight relationship insights
 
 ## Purpose
 
-This project is being built as a serious portfolio-grade iOS application that demonstrates:
+MyFriends is being built as a portfolio-grade iOS project that demonstrates:
 
-- SwiftUI interface design
-- SwiftData modeling and persistence
-- Hierarchical navigation patterns
-- iterative product development with clear architectural boundaries
-- professional use of AI-assisted software development workflows
+- SwiftUI interface design with native interaction patterns
+- SwiftData modeling for hierarchical local data
+- Relationship-focused product thinking beyond a standard CRUD contacts app
+- Incremental refactoring to improve maintainability as scope grows
+- Professional use of AI-assisted software development in a real project workflow
 
 ## Author
 
-Built by Harry So Cool with Swift, SwiftUI, and OpenAI Codex-assisted development.
+Built by Harry So Cool with Swift, SwiftUI, SwiftData, and OpenAI Codex-assisted development.

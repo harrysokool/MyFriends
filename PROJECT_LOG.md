@@ -2,254 +2,214 @@
 
 ## 1. Project Overview
 
-MyFriends is an iOS app that allows users to organize contacts using custom folders and nested groups instead of traditional alphabetical phonebooks.
+MyFriends is an iOS app for organizing people through custom folders and nested groups instead of a flat alphabetical phonebook.
 
-### Core Idea
+### Core Product Direction
+
 Users can:
-- Create folders (e.g. School, Work, Gym)
-- Nest folders inside folders
-- Add contacts inside folders
+
+- Create folders such as `School`, `Work`, `Family`, or `Projects`
+- Nest folders inside other folders
+- Store contacts inside specific folders
+- Treat contacts more like relationship profiles than basic address book entries
 
 ---
 
 ## 2. Setup Process
 
 ### Tools Used
-- Xcode (iOS development)
+
+- Xcode
 - Swift + SwiftUI
-- SwiftData (local database)
-- VS Code (AI coding environment)
-- OpenAI Codex (code generation)
-- Git + GitHub (version control)
+- SwiftData
+- VS Code
+- OpenAI Codex
+- Git + GitHub
 
 ### Setup Steps
 
-1. Created local project folder
-2. Initialized Git repository
-3. Created GitHub repository and pushed initial commit
-4. Installed Xcode
-5. Installed iOS simulator components
-6. Installed VS Code
-7. Installed Codex extension
-8. Created iOS app using:
-   - SwiftUI
-   - Swift
-   - SwiftData
-9. Ran first app successfully in simulator
+1. Created the local project and repository
+2. Initialized Git and connected GitHub
+3. Created the iOS app using SwiftUI + SwiftData
+4. Configured Xcode and simulator support
+5. Established a Codex-assisted workflow in VS Code
+6. Began iterative feature delivery with compile verification
 
 ---
 
 ## 3. Development Workflow
 
-Workflow used for building the app:
+Current workflow:
 
-1. Write feature prompt
-2. Send to Codex
-3. Review and apply changes
-4. Run app in Xcode
-5. Test feature
-6. Commit only if working
+1. Define a focused feature or cleanup goal
+2. Implement through Codex-assisted local development
+3. Review the result and refine structure where needed
+4. Verify with `xcodebuild` and Xcode
+5. Update documentation and continue incrementally
 
----
-
-## 4. Features Implemented
-
-### 4.1 Initial UI Setup
-- Clean empty state screen
-- Navigation title: MyFriends
-- "+" button added
+This workflow has been used for both feature delivery and maintainability-oriented refactors.
 
 ---
 
-### 4.2 Folder Creation
-Prompt:
-> Add folder creation using SwiftData with a plus button, alert input, and display folders in a list.
+## 4. Major Features Implemented
 
-Result:
-- Created Folder model
-- Added folder creation via alert with text field
-- Saved folders with SwiftData
-- Displayed root folders in a clean list
+### 4.1 Folder Hierarchy
 
----
+- Root folder creation with SwiftData persistence
+- Folder rename support
+- Nested subfolders through a self-referential `Folder` relationship
+- Recursive folder navigation
+- Root list excludes nested folders
 
-### 4.3 Folder Detail Navigation
-Prompt:
-> Add navigation from the folder list to a folder detail screen.
+### 4.2 Contacts
 
-Result:
-- Created FolderDetailView
-- Navigation from folder list to detail screen
-- Folder name shown as navigation title
-- Placeholder UI for folder content
+- Contacts belong to a specific folder
+- Contact create, edit, and delete flows are implemented
+- Contact detail screen shows a richer profile layout
+- Contact model supports:
+  - name
+  - phone number
+  - email
+  - Instagram
+  - notes
+  - created date
 
----
+### 4.3 Favorites
 
-### 4.4 Nested Subfolders
-Prompt:
-> Add support for subfolders inside FolderDetailView.
+- Added `isFavorite` support to `FriendContact`
+- Contacts can be starred or unstarred from the contact detail screen
+- Home screen shows a `Favorites` smart-folder row only when favorites exist
+- Favorites are not stored as real folders
+- Added a dedicated `FavoritesView`
 
-Result:
-- Folder model supports parent/child relationship
-- Can create subfolders inside folders
-- Subfolders are saved with SwiftData
-- Recursive navigation works
-- Root folder list excludes nested subfolders
+### 4.4 Search
 
----
+- Global hierarchical search across all folders and contacts
+- Search results include deeply nested items
+- Results are grouped into:
+  - Folders
+  - Contacts
+- Results display full hierarchy paths where appropriate
+- Search uses native SwiftUI searchable drawer placement
 
-### 4.5 Contacts Inside Folders
-Prompt:
-> Add support for contacts inside a folder.
+### 4.5 Contact Actions
 
-Result:
-- Created FriendContact model
-- Contacts linked to folders
-- Contacts store name, phone number, and createdAt
-- Can create contacts inside folders using a sheet
-- Folder detail screen shows subfolders and contacts in separate sections
+- Phone numbers are tappable with call confirmation
+- Instagram usernames are tappable
+- Instagram opens in the app when available, then falls back to Safari
 
----
+### 4.6 Phone Number Improvements
 
-### 4.6 Contact Detail Screen
-Prompt:
-> Add navigation from contacts to a contact detail screen.
+- Added country picker and dialing code handling
+- Added practical phone number validation
+- Supports common formatting characters
+- Rejects invalid input before save
+- Stores phone numbers in a normalized form
+- Migration issue from required phone metadata fields was fixed by making added fields migration-safe
 
-Result:
-- Created ContactDetailView
-- Navigation from contact list
-- Displays contact name and phone number
-- Uses contact name as the navigation title
+### 4.7 Interaction Tracking
 
----
-
-### 4.7 Editing and Deletion
-Prompt:
-> Add support for deleting and editing folders and contacts.
-
-Result:
-- Added swipe-to-delete for root folders
-- Added swipe-to-delete for subfolders
-- Added swipe-to-delete for contacts
-- Added simple folder renaming via alert
-- Added simple contact editing via sheet
-- Folder deletion cascades through nested contents using SwiftData relationships
+- Added `lastInteractedAt`
+- Added `interactionNote`
+- Contact detail screen displays interaction history when present
+- Added a simple sheet to log or update an interaction date and note
 
 ---
 
-### 4.8 Search
-Prompt:
-> Add search functionality to the MyFriends app.
+## 5. Maintainability Refactors Completed
 
-Result:
-- Added live folder search on the main screen
-- Added live subfolder and contact search in FolderDetailView
-- Search updates as the user types
-- Empty search shows the normal full list
+Recent cleanup work has focused on reducing duplication and improving structure without changing product behavior.
 
----
+### 5.1 Shared Search Logic
 
-### 4.9 Native Search Bar Placement
-Prompt:
-> Fix the search bar placement to match native iOS behavior.
+- Extracted global search and path-based sorting into `SearchService`
+- Removed duplicated search logic from:
+  - `ContentView`
+  - `FolderDetailView`
+  - `FavoritesView`
 
-Result:
-- Updated both screens to use SwiftUI `searchable` with `navigationBarDrawer`
-- Search bars are hidden initially
-- Search bars appear when the user pulls down, matching native iOS behavior
+### 5.2 Reusable Contact Form
 
----
+- Extracted shared contact create/edit fields into `ContactFormView`
+- Added `ContactFormState` to centralize input state and validation
+- Reused the same form in both create and edit flows
 
-### 4.10 List UI Polish
-Prompt:
-> Improve the UI of folder and contact lists to make the app feel more polished.
+### 5.3 Folder Detail Component Split
 
-Result:
-- Added clearer folder and contact icons
-- Improved spacing and alignment in list rows
-- Made folder rows and contact rows visually distinct
-- Kept styling subtle and consistent with iOS conventions
+- Extracted:
+  - subfolder section view
+  - contact section view
+  - empty state row view
+- `FolderDetailView` now acts more clearly as a coordinator
 
----
+### 5.4 Shared Contact Persistence Mapping
 
-## 5. Git Strategy
-
-- Commit only after working features
-- Avoid committing broken code
-- Use clear commit messages:
-  - "Add folder creation with SwiftData"
-  - "Add nested subfolders"
-  - "Add contacts inside folders"
+- Extracted form-to-model mapping into `ContactPersistenceService`
+- Removed duplicated contact mapping logic from:
+  - `FolderDetailView`
+  - `ContactDetailView`
 
 ---
 
-## 6. Key Learnings
-
-- AI is powerful but requires clear prompts
-- Small incremental features work best
-- Always test after each change
-- Git is essential for safe iteration
-- Xcode is used for running, not writing code
-- VS Code + Codex is used for development
-
----
-
-## 7. Current App State
+## 6. Current App State
 
 The app currently supports:
-- Folder creation
-- Nested folders
-- Adding contacts to folders
-- Viewing contact details
-- Editing folders
-- Editing contacts
-- Deleting folders, subfolders, and contacts
-- Search on root folders
-- Search inside folders for subfolders and contacts
-- Native pull-down search bar placement
-- SwiftData persistence for folders, subfolders, and contacts
-- Empty states when a folder has no subfolders or contacts
-- Sectioned folder detail UI with add actions for subfolders and contacts
-- More polished folder and contact list rows with clearer visual distinction
+
+- Root folders
+- Nested subfolders
+- Contacts within folders
+- Folder rename and delete
+- Contact edit and delete
+- Favorites smart folder
+- Global search across the full hierarchy
+- Contact detail navigation
+- Phone and Instagram actions
+- Interaction tracking
+- SwiftData-backed persistence for all implemented data
+- Native empty states and sectioned list presentation
+
+The app is now both more feature-complete and more maintainable than the initial implementation.
 
 ---
 
-## 8. Next Steps
+## 7. Remaining High-Value Cleanup Areas
 
-Planned features:
-- Possibly notes or tags for contacts
-- Validation and formatting for phone numbers
-- Move `Item` starter model cleanup if no longer needed
-- Confirmation dialogs for destructive folder deletion
-- Additional detail fields for contacts
-- Broader testing coverage
+Based on the latest maintainability review, the next important cleanup opportunities are:
 
----
+1. Reduce the remaining coordinator weight inside `FolderDetailView`
+2. Improve model and file organization, especially around `Item.swift`
+3. Add stronger user-facing error handling instead of `print(...)`-only failures
 
-## 9. Implementation Notes
-
-- `Folder` uses a self-referential SwiftData relationship for nested subfolders
-- `FriendContact` belongs to a single folder through SwiftData relationships
-- `ContentView` shows only root folders
-- `ContentView` supports folder search and swipe edit/delete
-- `FolderDetailView` supports:
-  - Viewing subfolders
-  - Viewing contacts
-  - Creating subfolders via alert
-  - Creating contacts via sheet
-  - Searching subfolders and contacts
-  - Editing and deleting subfolders
-  - Editing and deleting contacts
-- `ContactDetailView` supports viewing and editing a contact
-- Search uses in-memory filtering with SwiftUI `searchable`
-- Folder and contact deletion is persisted through SwiftData and reflected immediately in the UI
+These are important because they will affect future feature work more than UI polish tasks.
 
 ---
 
-## 10. Verification
+## 8. Implementation Notes
 
-- Repeatedly verified changes using `xcodebuild`
-- Current implemented features compile successfully in the iOS simulator build target
-- Latest verified areas include editing, deletion, search, native search placement, and row UI polish
+- `Folder` uses a self-referential SwiftData relationship for nested hierarchy
+- `FriendContact` belongs to a single folder
+- Favorites are implemented as a smart-folder pattern, not a stored folder record
+- Search is centralized through `SearchService`
+- Contact form state and validation are centralized through `ContactFormView` and `ContactFormState`
+- Contact save/update mapping is centralized through `ContactPersistenceService`
+- `ContactDetailView` now handles:
+  - favorite toggling
+  - contact editing
+  - phone action
+  - Instagram action
+  - interaction logging
+
+---
+
+## 9. Verification
+
+- Changes have been repeatedly verified with `xcodebuild`
+- The current project compiles successfully for the iOS simulator build target
+- Recent verified areas include:
+  - search refactor
+  - reusable contact form refactor
+  - folder detail view component split
+  - shared contact persistence logic
+  - interaction tracking
 
 ---
