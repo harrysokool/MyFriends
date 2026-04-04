@@ -25,6 +25,27 @@ final class Folder {
         self.createdAt = createdAt
         self.parent = parent
     }
+
+    var pathComponents: [String] {
+        var components: [String] = [name]
+        var currentParent = parent
+
+        while let folder = currentParent {
+            components.insert(folder.name, at: 0)
+            currentParent = folder.parent
+        }
+
+        return components
+    }
+
+    var fullPath: String {
+        pathComponents.joined(separator: " / ")
+    }
+
+    var parentPath: String? {
+        let components = pathComponents.dropLast()
+        return components.isEmpty ? nil : components.joined(separator: " / ")
+    }
 }
 
 @Model
@@ -71,6 +92,10 @@ final class FriendContact {
 
     var formattedPhoneNumber: String {
         "\(resolvedPhoneDialingCode) \(phoneNumber)"
+    }
+
+    var folderPath: String? {
+        folder?.fullPath
     }
 }
 

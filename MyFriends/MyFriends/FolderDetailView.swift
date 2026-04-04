@@ -3,6 +3,8 @@ import SwiftData
 
 struct FolderDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Folder.createdAt) private var allFolders: [Folder]
+    @Query(sort: \FriendContact.createdAt) private var allContacts: [FriendContact]
 
     let folder: Folder
 
@@ -30,126 +32,68 @@ struct FolderDetailView: View {
     }
 
     private var filteredSubfolders: [Folder] {
-        guard !searchText.isEmpty else { return subfolders }
+        guard !normalizedSearchText.isEmpty else { return subfolders }
 
         return subfolders.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
+            $0.name.localizedCaseInsensitiveContains(normalizedSearchText)
         }
     }
 
     private var filteredContacts: [FriendContact] {
-        guard !searchText.isEmpty else { return contacts }
+        guard !normalizedSearchText.isEmpty else { return contacts }
 
         return contacts.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
+            $0.name.localizedCaseInsensitiveContains(normalizedSearchText)
         }
     }
 
-    var body: some View {
-        List {
-            Section("Subfolders") {
-                if filteredSubfolders.isEmpty {
-                    sectionPlaceholder(subfolderPlaceholderText)
-                } else {
-                    ForEach(filteredSubfolders) { subfolder in
-                        NavigationLink {
-                            FolderDetailView(folder: subfolder)
-                        } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "folder.fill")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 30, height: 30)
-                                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(subfolder.name)
-                                        .font(.body)
-                                        .fontWeight(.semibold)
+    private var isSearching: Bool {
+        !normalizedSearchText.isEmpty
+    }
 
-                                    Text("Subfolder")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
+    private var matchingFolders: [Folder] {
+        guard isSearching else { return [] }
 
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 6)
-                        }
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                deleteFolder(subfolder)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                startEditing(folder: subfolder)
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-                        }
-                    }
+        return allFolders
+            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
+            .sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
+    }
+
+    private var matchingContacts: [FriendContact] {
+        guard isSearching else { return [] }
+
+        return allContacts
+            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
+            .sorted { lhs, rhs in
+                let leftPath = lhs.folderPath ?? ""
+                let rightPath = rhs.folderPath ?? ""
+
+                if leftPath.caseInsensitiveCompare(rightPath) == .orderedSame {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
                 }
+
+                return leftPath.localizedCaseInsensitiveCompare(rightPath) == .orderedAscending
             }
+    }
 
-            Section("Contacts") {
-                if filteredContacts.isEmpty {
-                    sectionPlaceholder(contactPlaceholderText)
-                } else {
-                    ForEach(filteredContacts) { contact in
-                        NavigationLink {
-                            ContactDetailView(contact: contact)
-                        } label: {
-                            HStack(spacing: 14) {
-                                Image(systemName: "person.crop.circle.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(.green)
-                                    .frame(width: 30, height: 30)
-                                    .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(contact.name)
-                                        .font(.body)
-                                        .fontWeight(.semibold)
-
-                                    Text(contact.formattedPhoneNumber)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 6)
-                        }
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                deleteContact(contact)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                startEditing(contact: contact)
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-                        }
-                    }
-                }
+    var body: some View {
+        Group {
+            if isSearching {
+                globalSearchResultsList
+            } else {
+                localContentList
             }
         }
-        .listStyle(.insetGrouped)
         .navigationTitle(folder.name)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .automatic),
-            prompt: "Search subfolders and contacts"
+            prompt: "Search folders and contacts"
         )
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -266,6 +210,108 @@ struct FolderDetailView: View {
             }
             .presentationDetents([.medium])
         }
+    }
+
+    private var localContentList: some View {
+        List {
+            Section("Subfolders") {
+                if filteredSubfolders.isEmpty {
+                    sectionPlaceholder(subfolderPlaceholderText)
+                } else {
+                    ForEach(filteredSubfolders) { subfolder in
+                        NavigationLink {
+                            FolderDetailView(folder: subfolder)
+                        } label: {
+                            FolderRowView(name: subfolder.name, subtitle: "Subfolder")
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                deleteFolder(subfolder)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                startEditing(folder: subfolder)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
+                    }
+                }
+            }
+
+            Section("Contacts") {
+                if filteredContacts.isEmpty {
+                    sectionPlaceholder(contactPlaceholderText)
+                } else {
+                    ForEach(filteredContacts) { contact in
+                        NavigationLink {
+                            ContactDetailView(contact: contact)
+                        } label: {
+                            ContactRowView(name: contact.name, subtitle: contact.formattedPhoneNumber)
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                deleteContact(contact)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                startEditing(contact: contact)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private var globalSearchResultsList: some View {
+        List {
+            Section("Folders") {
+                if matchingFolders.isEmpty {
+                    sectionPlaceholder("No matching folders")
+                } else {
+                    ForEach(matchingFolders) { folder in
+                        NavigationLink {
+                            FolderDetailView(folder: folder)
+                        } label: {
+                            FolderRowView(
+                                name: folder.name,
+                                subtitle: folder.parentPath ?? "Root folder"
+                            )
+                        }
+                    }
+                }
+            }
+
+            Section("Contacts") {
+                if matchingContacts.isEmpty {
+                    sectionPlaceholder("No matching contacts")
+                } else {
+                    ForEach(matchingContacts) { contact in
+                        NavigationLink {
+                            ContactDetailView(contact: contact)
+                        } label: {
+                            ContactRowView(
+                                name: contact.name,
+                                subtitle: contact.folderPath ?? "Unassigned"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
     }
 
     private var trimmedSubfolderName: String {

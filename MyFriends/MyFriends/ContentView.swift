@@ -4,6 +4,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Folder.createdAt) private var folders: [Folder]
+    @Query(sort: \FriendContact.createdAt) private var contacts: [FriendContact]
 
     @State private var isShowingAddFolderAlert = false
     @State private var isShowingEditFolderAlert = false
@@ -19,50 +20,64 @@ struct ContentView: View {
     }
 
     private var filteredFolders: [Folder] {
-        guard !searchText.isEmpty else { return rootFolders }
+        guard !normalizedSearchText.isEmpty else { return rootFolders }
 
         return rootFolders.filter {
-            $0.name.localizedCaseInsensitiveContains(searchText)
+            $0.name.localizedCaseInsensitiveContains(normalizedSearchText)
         }
+    }
+
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isSearching: Bool {
+        !normalizedSearchText.isEmpty
+    }
+
+    private var matchingFolders: [Folder] {
+        guard isSearching else { return [] }
+
+        return folders
+            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
+            .sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
+    }
+
+    private var matchingContacts: [FriendContact] {
+        guard isSearching else { return [] }
+
+        return contacts
+            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
+            .sorted { lhs, rhs in
+                let leftPath = lhs.folderPath ?? ""
+                let rightPath = rhs.folderPath ?? ""
+
+                if leftPath.caseInsensitiveCompare(rightPath) == .orderedSame {
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+
+                return leftPath.localizedCaseInsensitiveCompare(rightPath) == .orderedAscending
+            }
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if rootFolders.isEmpty {
+                if isSearching {
+                    searchResultsList
+                } else if rootFolders.isEmpty {
                     ContentUnavailableView(
                         "No Folders Yet",
                         systemImage: "folder",
                         description: Text("Tap the + button to create your first folder.")
                     )
-                } else if filteredFolders.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
                         ForEach(filteredFolders) { folder in
                             NavigationLink {
                                 FolderDetailView(folder: folder)
                             } label: {
-                                HStack(spacing: 14) {
-                                    Image(systemName: "folder.fill")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.blue)
-                                        .frame(width: 30, height: 30)
-                                        .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(folder.name)
-                                            .font(.body)
-                                            .fontWeight(.semibold)
-
-                                        Text("Folder")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Spacer(minLength: 0)
-                                }
-                                .padding(.vertical, 6)
+                                FolderRowView(name: folder.name, subtitle: "Folder")
                             }
                             .swipeActions {
                                 Button(role: .destructive) {
@@ -126,13 +141,66 @@ struct ContentView: View {
             .searchable(
                 text: $searchText,
                 placement: .navigationBarDrawer(displayMode: .automatic),
-                prompt: "Search folders"
+                prompt: "Search folders and contacts"
             )
+        }
+    }
+
+    @ViewBuilder
+    private var searchResultsList: some View {
+        if matchingFolders.isEmpty && matchingContacts.isEmpty {
+            ContentUnavailableView.search(text: normalizedSearchText)
+        } else {
+            List {
+                Section("Folders") {
+                    if matchingFolders.isEmpty {
+                        searchPlaceholder("No matching folders")
+                    } else {
+                        ForEach(matchingFolders) { folder in
+                            NavigationLink {
+                                FolderDetailView(folder: folder)
+                            } label: {
+                                FolderRowView(
+                                    name: folder.name,
+                                    subtitle: folder.parentPath ?? "Root folder"
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Section("Contacts") {
+                    if matchingContacts.isEmpty {
+                        searchPlaceholder("No matching contacts")
+                    } else {
+                        ForEach(matchingContacts) { contact in
+                            NavigationLink {
+                                ContactDetailView(contact: contact)
+                            } label: {
+                                ContactRowView(
+                                    name: contact.name,
+                                    subtitle: contact.folderPath ?? "Unassigned"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
         }
     }
 
     private var trimmedFolderName: String {
         newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    @ViewBuilder
+    private func searchPlaceholder(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
     }
 
     private var trimmedEditedFolderName: String {
