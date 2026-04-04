@@ -47,7 +47,7 @@ struct ContactDetailView: View {
                 }
 
                 if let instagram = displayValue(contact.instagram) {
-                    detailRow(title: "Instagram", value: instagram)
+                    instagramRow(displayValue: instagram)
                 }
 
                 if let notes = displayValue(contact.notes) {
@@ -196,6 +196,23 @@ struct ContactDetailView: View {
         return result.isEmpty ? nil : result
     }
 
+    private var instagramUsername: String? {
+        guard let instagram = displayValue(contact.instagram) else { return nil }
+
+        let trimmedUsername = instagram
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
+
+        guard !trimmedUsername.isEmpty else { return nil }
+
+        let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._"))
+        let isValid = trimmedUsername.unicodeScalars.allSatisfy { allowedCharacters.contains($0) }
+
+        guard isValid else { return nil }
+
+        return trimmedUsername
+    }
+
     @ViewBuilder
     private var phoneRow: some View {
         if callablePhoneNumber != nil {
@@ -224,6 +241,37 @@ struct ContactDetailView: View {
             .buttonStyle(.plain)
         } else {
             detailRow(title: "Phone", value: contact.phoneNumber)
+        }
+    }
+
+    @ViewBuilder
+    private func instagramRow(displayValue: String) -> some View {
+        if let instagramUsername {
+            Button {
+                openInstagramProfile(username: instagramUsername)
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Instagram")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+
+                        Text(displayValue)
+                            .font(.body)
+                            .foregroundStyle(.blue)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "arrow.up.right.square.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.blue)
+                }
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+        } else {
+            detailRow(title: "Instagram", value: displayValue)
         }
     }
 
@@ -290,6 +338,21 @@ struct ContactDetailView: View {
         }
 
         openURL(url)
+    }
+
+    private func openInstagramProfile(username: String) {
+        guard
+            let appURL = URL(string: "instagram://user?username=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? username)"),
+            let webURL = URL(string: "https://www.instagram.com/\(username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? username)/")
+        else {
+            return
+        }
+
+        openURL(appURL) { accepted in
+            if !accepted {
+                openURL(webURL)
+            }
+        }
     }
 }
 
