@@ -19,14 +19,18 @@ struct ContentView: View {
                     )
                 } else {
                     List(folders) { folder in
-                        HStack(spacing: 12) {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(.blue)
+                        NavigationLink {
+                            FolderDetailView(folder: folder)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.blue)
 
-                            Text(folder.name)
-                                .font(.body)
+                                Text(folder.name)
+                                    .font(.body)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
                     }
                     .listStyle(.plain)
                 }
