@@ -120,7 +120,11 @@ struct FolderDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(folder.name)
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $searchText, prompt: "Search subfolders and contacts")
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .automatic),
+            prompt: "Search subfolders and contacts"
+        )
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

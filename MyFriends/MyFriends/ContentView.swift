@@ -111,7 +111,11 @@ struct ContentView: View {
             } message: {
                 Text("Update the folder name.")
             }
-            .searchable(text: $searchText, prompt: "Search folders")
+            .searchable(
+                text: $searchText,
+                placement: .navigationBarDrawer(displayMode: .automatic),
+                prompt: "Search folders"
+            )
         }
     }
 
