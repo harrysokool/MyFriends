@@ -4,11 +4,13 @@ import SwiftData
 struct ContactDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
+    @Query(sort: \Folder.createdAt) private var folders: [Folder]
 
     let contact: FriendContact
 
     @State private var isShowingEditContactSheet = false
     @State private var isShowingInteractionSheet = false
+    @State private var isShowingMoveToFolderSheet = false
     @State private var isShowingCallConfirmation = false
     @State private var contactForm = ContactFormState()
     @State private var interactionDate = Date()
@@ -62,6 +64,20 @@ struct ContactDetailView: View {
                 }
 
                 interactionSection
+            }
+
+            Section("Actions") {
+                Button {
+                    isShowingMoveToFolderSheet = true
+                } label: {
+                    HStack {
+                        Text("Move to Folder")
+                        Spacer()
+                        Image(systemName: "folder")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
         .listStyle(.insetGrouped)
@@ -159,6 +175,53 @@ struct ContactDetailView: View {
             }
             .presentationDetents([.medium])
         }
+        .sheet(isPresented: $isShowingMoveToFolderSheet) {
+            NavigationStack {
+                List {
+                    Section("Select Destination") {
+                        ForEach(sortedFolders) { folder in
+                            Button {
+                                moveContact(to: folder)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(folder.name)
+                                            .font(.body)
+                                            .fontWeight(.semibold)
+
+                                        Text(folder.fullPath)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                    }
+
+                                    Spacer()
+
+                                    if isCurrentFolder(folder) {
+                                        Image(systemName: "checkmark")
+                                            .font(.footnote.weight(.semibold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isCurrentFolder(folder))
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .navigationTitle("Move to Folder")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancel") {
+                            isShowingMoveToFolderSheet = false
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -183,6 +246,10 @@ struct ContactDetailView: View {
 
     private var trimmedInteractionNote: String {
         interactionNote.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var sortedFolders: [Folder] {
+        folders.sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
     }
 
     private var callablePhoneNumber: String? {
@@ -311,6 +378,24 @@ struct ContactDetailView: View {
     private func resetInteractionFields() {
         interactionDate = .now
         interactionNote = ""
+    }
+
+    private func isCurrentFolder(_ folder: Folder) -> Bool {
+        guard let currentFolder = contact.folder else { return false }
+        return currentFolder === folder
+    }
+
+    private func moveContact(to folder: Folder) {
+        guard !isCurrentFolder(folder) else { return }
+
+        contact.folder = folder
+
+        do {
+            try modelContext.save()
+            isShowingMoveToFolderSheet = false
+        } catch {
+            print("Failed to move contact: \(error)")
+        }
     }
 
     @ViewBuilder
