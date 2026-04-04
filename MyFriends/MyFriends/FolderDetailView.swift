@@ -63,16 +63,20 @@ struct FolderDetailView: View {
                     if !contacts.isEmpty {
                         Section("Contacts") {
                             ForEach(contacts) { contact in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(contact.name)
-                                        .font(.body)
-                                        .fontWeight(.medium)
+                                NavigationLink {
+                                    ContactDetailView(contact: contact)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(contact.name)
+                                            .font(.body)
+                                            .fontWeight(.medium)
 
-                                    Text(contact.phoneNumber)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
+                                        Text(contact.phoneNumber)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.vertical, 4)
                                 }
-                                .padding(.vertical, 4)
                             }
                         }
                     }
