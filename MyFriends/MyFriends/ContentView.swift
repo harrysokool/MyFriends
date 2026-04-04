@@ -8,17 +8,23 @@ struct ContentView: View {
     @State private var isShowingAddFolderAlert = false
     @State private var newFolderName = ""
 
+    private var rootFolders: [Folder] {
+        folders
+            .filter { $0.parent == nil }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
     var body: some View {
         NavigationStack {
             Group {
-                if folders.isEmpty {
+                if rootFolders.isEmpty {
                     ContentUnavailableView(
                         "No Folders Yet",
                         systemImage: "folder",
                         description: Text("Tap the + button to create your first folder.")
                     )
                 } else {
-                    List(folders) { folder in
+                    List(rootFolders) { folder in
                         NavigationLink {
                             FolderDetailView(folder: folder)
                         } label: {

@@ -12,10 +12,15 @@ import SwiftData
 final class Folder {
     var name: String
     var createdAt: Date
+    var parent: Folder?
 
-    init(name: String, createdAt: Date = .now) {
+    @Relationship(deleteRule: .cascade, inverse: \Folder.parent)
+    var childFolders: [Folder] = []
+
+    init(name: String, createdAt: Date = .now, parent: Folder? = nil) {
         self.name = name
         self.createdAt = createdAt
+        self.parent = parent
     }
 }
 
