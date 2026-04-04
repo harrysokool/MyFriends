@@ -67,8 +67,9 @@ Prompt:
 
 Result:
 - Created Folder model
-- Added folder creation via alert
-- Displayed folders in list
+- Added folder creation via alert with text field
+- Saved folders with SwiftData
+- Displayed root folders in a clean list
 
 ---
 
@@ -79,6 +80,7 @@ Prompt:
 Result:
 - Created FolderDetailView
 - Navigation from folder list to detail screen
+- Folder name shown as navigation title
 - Placeholder UI for folder content
 
 ---
@@ -90,7 +92,9 @@ Prompt:
 Result:
 - Folder model supports parent/child relationship
 - Can create subfolders inside folders
+- Subfolders are saved with SwiftData
 - Recursive navigation works
+- Root folder list excludes nested subfolders
 
 ---
 
@@ -101,8 +105,9 @@ Prompt:
 Result:
 - Created FriendContact model
 - Contacts linked to folders
-- Can create contacts inside folders
-- Contacts display correctly
+- Contacts store name, phone number, and createdAt
+- Can create contacts inside folders using a sheet
+- Folder detail screen shows subfolders and contacts in separate sections
 
 ---
 
@@ -114,6 +119,7 @@ Result:
 - Created ContactDetailView
 - Navigation from contact list
 - Displays contact name and phone number
+- Uses contact name as the navigation title
 
 ---
 
@@ -146,6 +152,9 @@ The app currently supports:
 - Nested folders
 - Adding contacts to folders
 - Viewing contact details
+- SwiftData persistence for folders, subfolders, and contacts
+- Empty states when a folder has no subfolders or contacts
+- Simple sectioned folder detail UI with add actions for subfolders and contacts
 
 ---
 
@@ -154,8 +163,31 @@ The app currently supports:
 Planned features:
 - Edit and delete folders
 - Edit and delete contacts
-- Better UI (sections, icons, spacing)
+- Better UI polish
 - Search functionality
 - Possibly notes or tags for contacts
+- Validation and formatting for phone numbers
+- Move `Item` starter model cleanup if no longer needed
+
+---
+
+## 9. Implementation Notes
+
+- `Folder` uses a self-referential SwiftData relationship for nested subfolders
+- `FriendContact` belongs to a single folder through SwiftData relationships
+- `ContentView` shows only root folders
+- `FolderDetailView` supports:
+  - Viewing subfolders
+  - Viewing contacts
+  - Creating subfolders via alert
+  - Creating contacts via sheet
+- `ContactDetailView` is currently read-only
+
+---
+
+## 10. Verification
+
+- Repeatedly verified changes using `xcodebuild`
+- Current implemented features compile successfully in the iOS simulator build target
 
 ---
