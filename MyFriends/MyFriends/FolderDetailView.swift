@@ -51,12 +51,24 @@ struct FolderDetailView: View {
                         NavigationLink {
                             FolderDetailView(folder: subfolder)
                         } label: {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 14) {
                                 Image(systemName: "folder.fill")
+                                    .font(.system(size: 17, weight: .semibold))
                                     .foregroundStyle(.blue)
+                                    .frame(width: 30, height: 30)
+                                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
 
-                                Text(subfolder.name)
-                                    .font(.body)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(subfolder.name)
+                                        .font(.body)
+                                        .fontWeight(.semibold)
+
+                                    Text("Subfolder")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer(minLength: 0)
                             }
                             .padding(.vertical, 6)
                         }
@@ -87,14 +99,24 @@ struct FolderDetailView: View {
                         NavigationLink {
                             ContactDetailView(contact: contact)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(contact.name)
-                                    .font(.body)
-                                    .fontWeight(.medium)
+                            HStack(spacing: 14) {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.green)
+                                    .frame(width: 30, height: 30)
+                                    .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
 
-                                Text(contact.phoneNumber)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(contact.name)
+                                        .font(.body)
+                                        .fontWeight(.semibold)
+
+                                    Text(contact.phoneNumber)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer(minLength: 0)
                             }
                             .padding(.vertical, 6)
                         }

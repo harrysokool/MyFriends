@@ -43,14 +43,26 @@ struct ContentView: View {
                             NavigationLink {
                                 FolderDetailView(folder: folder)
                             } label: {
-                                HStack(spacing: 12) {
+                                HStack(spacing: 14) {
                                     Image(systemName: "folder.fill")
+                                        .font(.system(size: 18, weight: .semibold))
                                         .foregroundStyle(.blue)
+                                        .frame(width: 30, height: 30)
+                                        .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
 
-                                    Text(folder.name)
-                                        .font(.body)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(folder.name)
+                                            .font(.body)
+                                            .fontWeight(.semibold)
+
+                                        Text("Folder")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer(minLength: 0)
                                 }
-                                .padding(.vertical, 4)
+                                .padding(.vertical, 6)
                             }
                             .swipeActions {
                                 Button(role: .destructive) {
