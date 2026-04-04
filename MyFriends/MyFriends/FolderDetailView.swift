@@ -14,12 +14,7 @@ struct FolderDetailView: View {
     @State private var newSubfolderName = ""
     @State private var editedFolderName = ""
     @State private var searchText = ""
-    @State private var contactName = ""
-    @State private var contactRegionCode = PhoneCountry.defaultCountry.regionCode
-    @State private var contactPhoneNumber = ""
-    @State private var contactEmail = ""
-    @State private var contactInstagram = ""
-    @State private var contactNotes = ""
+    @State private var contactForm = ContactFormState()
     @State private var contactBeingEdited: FriendContact?
     @State private var folderBeingEdited: Folder?
 
@@ -48,7 +43,7 @@ struct FolderDetailView: View {
     }
 
     private var normalizedSearchText: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        SearchService.normalizedQuery(searchText)
     }
 
     private var isSearching: Bool {
@@ -56,28 +51,19 @@ struct FolderDetailView: View {
     }
 
     private var matchingFolders: [Folder] {
-        guard isSearching else { return [] }
-
-        return allFolders
-            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
-            .sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
+        searchResults.folders
     }
 
     private var matchingContacts: [FriendContact] {
-        guard isSearching else { return [] }
+        searchResults.contacts
+    }
 
-        return allContacts
-            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
-            .sorted { lhs, rhs in
-                let leftPath = lhs.folderPath ?? ""
-                let rightPath = rhs.folderPath ?? ""
-
-                if leftPath.caseInsensitiveCompare(rightPath) == .orderedSame {
-                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-                }
-
-                return leftPath.localizedCaseInsensitiveCompare(rightPath) == .orderedAscending
-            }
+    private var searchResults: SearchResults {
+        SearchService.search(
+            query: searchText,
+            folders: allFolders,
+            contacts: allContacts
+        )
     }
 
     var body: some View {
@@ -149,47 +135,7 @@ struct FolderDetailView: View {
         }
         .sheet(isPresented: $isShowingContactSheet) {
             NavigationStack {
-                Form {
-                    Section("Contact Info") {
-                        TextField("Name", text: $contactName)
-                        Picker("Country", selection: $contactRegionCode) {
-                            ForEach(PhoneCountry.all) { country in
-                                Text(country.displayName).tag(country.regionCode)
-                            }
-                        }
-
-                        HStack(spacing: 12) {
-                            Text(selectedCountry.dialingCode)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
-
-                            TextField("Phone Number", text: $contactPhoneNumber)
-                                .keyboardType(.phonePad)
-                        }
-
-                        if let phoneValidationMessage {
-                            Text(phoneValidationMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        }
-
-                        TextField("Email", text: $contactEmail)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        TextField("Instagram", text: $contactInstagram)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-
-                    Section("Notes") {
-                        TextField("Notes", text: $contactNotes, axis: .vertical)
-                            .lineLimit(3...6)
-                    }
-                }
+                ContactFormView(formState: $contactForm)
                 .navigationTitle(contactSheetTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -204,7 +150,7 @@ struct FolderDetailView: View {
                         Button(contactSheetActionTitle) {
                             saveContact()
                         }
-                        .disabled(!canSaveContact)
+                        .disabled(!contactForm.canSave)
                     }
                 }
             }
@@ -214,104 +160,58 @@ struct FolderDetailView: View {
 
     private var localContentList: some View {
         List {
-            Section("Subfolders") {
-                if filteredSubfolders.isEmpty {
-                    sectionPlaceholder(subfolderPlaceholderText)
-                } else {
-                    ForEach(filteredSubfolders) { subfolder in
-                        NavigationLink {
-                            FolderDetailView(folder: subfolder)
-                        } label: {
-                            FolderRowView(name: subfolder.name, subtitle: "Subfolder")
-                        }
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                deleteFolder(subfolder)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                startEditing(folder: subfolder)
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-                        }
-                    }
-                }
-            }
+            SubfolderListSectionView(
+                subfolders: filteredSubfolders,
+                placeholderText: subfolderPlaceholderText,
+                onEdit: startEditing(folder:),
+                onDelete: deleteFolder(_:)
+            )
 
-            Section("Contacts") {
-                if filteredContacts.isEmpty {
-                    sectionPlaceholder(contactPlaceholderText)
-                } else {
-                    ForEach(filteredContacts) { contact in
-                        NavigationLink {
-                            ContactDetailView(contact: contact)
-                        } label: {
-                            ContactRowView(name: contact.name, subtitle: contact.formattedPhoneNumber)
-                        }
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                deleteContact(contact)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                            Button {
-                                startEditing(contact: contact)
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-                            .tint(.blue)
-                        }
-                    }
-                }
-            }
+            ContactListSectionView(
+                title: "Contacts",
+                contacts: filteredContacts,
+                placeholderText: contactPlaceholderText,
+                subtitle: { $0.formattedPhoneNumber },
+                onEdit: startEditing(contact:),
+                onDelete: deleteContact(_:)
+            )
         }
         .listStyle(.insetGrouped)
     }
 
     private var globalSearchResultsList: some View {
         List {
-            Section("Folders") {
-                if matchingFolders.isEmpty {
-                    sectionPlaceholder("No matching folders")
-                } else {
-                    ForEach(matchingFolders) { folder in
-                        NavigationLink {
-                            FolderDetailView(folder: folder)
-                        } label: {
-                            FolderRowView(
-                                name: folder.name,
-                                subtitle: folder.parentPath ?? "Root folder"
-                            )
-                        }
-                    }
-                }
-            }
+            folderSearchResultsSection
 
-            Section("Contacts") {
-                if matchingContacts.isEmpty {
-                    sectionPlaceholder("No matching contacts")
-                } else {
-                    ForEach(matchingContacts) { contact in
-                        NavigationLink {
-                            ContactDetailView(contact: contact)
-                        } label: {
-                            ContactRowView(
-                                name: contact.name,
-                                subtitle: contact.folderPath ?? "Unassigned"
-                            )
-                        }
+            ContactListSectionView(
+                title: "Contacts",
+                contacts: matchingContacts,
+                placeholderText: "No matching contacts",
+                subtitle: { $0.folderPath ?? "Unassigned" },
+                onEdit: startEditing(contact:),
+                onDelete: deleteContact(_:)
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private var folderSearchResultsSection: some View {
+        Section("Folders") {
+            if matchingFolders.isEmpty {
+                FolderDetailEmptyStateView(text: "No matching folders")
+            } else {
+                ForEach(matchingFolders) { folder in
+                    NavigationLink {
+                        FolderDetailView(folder: folder)
+                    } label: {
+                        FolderRowView(
+                            name: folder.name,
+                            subtitle: folder.parentPath ?? "Root folder"
+                        )
                     }
                 }
             }
         }
-        .listStyle(.insetGrouped)
     }
 
     private var trimmedSubfolderName: String {
@@ -322,44 +222,12 @@ struct FolderDetailView: View {
         editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var trimmedContactName: String {
-        contactName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var selectedCountry: PhoneCountry {
-        PhoneCountry.country(for: contactRegionCode)
-    }
-
-    private var trimmedPhoneNumber: String {
-        PhoneNumberValidator.normalizedInput(contactPhoneNumber)
-    }
-
-    private var trimmedEmail: String {
-        contactEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedInstagram: String {
-        contactInstagram.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedNotes: String {
-        contactNotes.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     private var contactSheetTitle: String {
         contactBeingEdited == nil ? "New Contact" : "Edit Contact"
     }
 
     private var contactSheetActionTitle: String {
         contactBeingEdited == nil ? "Save" : "Update"
-    }
-
-    private var phoneValidationMessage: String? {
-        PhoneNumberValidator.validationMessage(for: contactPhoneNumber)
-    }
-
-    private var canSaveContact: Bool {
-        !trimmedContactName.isEmpty && phoneValidationMessage == nil
     }
 
     private var subfolderPlaceholderText: String {
@@ -376,15 +244,6 @@ struct FolderDetailView: View {
         }
 
         return "No matching contacts"
-    }
-
-    @ViewBuilder
-    private func sectionPlaceholder(_ text: String) -> some View {
-        Text(text)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 6)
     }
 
     private func addSubfolder() {
@@ -436,39 +295,28 @@ struct FolderDetailView: View {
 
     private func startEditing(contact: FriendContact) {
         contactBeingEdited = contact
-        contactName = contact.name
-        contactRegionCode = contact.resolvedPhoneRegionCode
-        contactPhoneNumber = contact.phoneNumber
-        contactEmail = contact.email ?? ""
-        contactInstagram = contact.instagram ?? ""
-        contactNotes = contact.notes ?? ""
+        contactForm = ContactFormState(contact: contact)
         isShowingContactSheet = true
     }
 
     private func saveContact() {
         if let contactBeingEdited {
-            contactBeingEdited.name = trimmedContactName
-            contactBeingEdited.phoneNumber = PhoneNumberValidator.storageValue(
-                from: trimmedPhoneNumber,
-                dialingCode: selectedCountry.dialingCode
-            )
-            contactBeingEdited.phoneRegionCode = selectedCountry.regionCode
-            contactBeingEdited.phoneDialingCode = selectedCountry.dialingCode
-            contactBeingEdited.email = optionalValue(from: trimmedEmail)
-            contactBeingEdited.instagram = optionalValue(from: trimmedInstagram)
-            contactBeingEdited.notes = optionalValue(from: trimmedNotes)
+            contactBeingEdited.name = contactForm.trimmedName
+            contactBeingEdited.phoneNumber = contactForm.storedPhoneNumber
+            contactBeingEdited.phoneRegionCode = contactForm.selectedCountry.regionCode
+            contactBeingEdited.phoneDialingCode = contactForm.selectedCountry.dialingCode
+            contactBeingEdited.email = contactForm.optionalValue(contactForm.trimmedEmail)
+            contactBeingEdited.instagram = contactForm.optionalValue(contactForm.trimmedInstagram)
+            contactBeingEdited.notes = contactForm.optionalValue(contactForm.trimmedNotes)
         } else {
             let contact = FriendContact(
-                name: trimmedContactName,
-                phoneNumber: PhoneNumberValidator.storageValue(
-                    from: trimmedPhoneNumber,
-                    dialingCode: selectedCountry.dialingCode
-                ),
-                phoneRegionCode: selectedCountry.regionCode,
-                phoneDialingCode: selectedCountry.dialingCode,
-                email: optionalValue(from: trimmedEmail),
-                instagram: optionalValue(from: trimmedInstagram),
-                notes: optionalValue(from: trimmedNotes),
+                name: contactForm.trimmedName,
+                phoneNumber: contactForm.storedPhoneNumber,
+                phoneRegionCode: contactForm.selectedCountry.regionCode,
+                phoneDialingCode: contactForm.selectedCountry.dialingCode,
+                email: contactForm.optionalValue(contactForm.trimmedEmail),
+                instagram: contactForm.optionalValue(contactForm.trimmedInstagram),
+                notes: contactForm.optionalValue(contactForm.trimmedNotes),
                 folder: folder
             )
             modelContext.insert(contact)
@@ -500,16 +348,7 @@ struct FolderDetailView: View {
     }
 
     private func resetContactFields() {
-        contactName = ""
-        contactRegionCode = PhoneCountry.defaultCountry.regionCode
-        contactPhoneNumber = ""
-        contactEmail = ""
-        contactInstagram = ""
-        contactNotes = ""
-    }
-
-    private func optionalValue(from value: String) -> String? {
-        value.isEmpty ? nil : value
+        contactForm.reset()
     }
 }
 

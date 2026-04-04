@@ -28,7 +28,7 @@ struct ContentView: View {
     }
 
     private var normalizedSearchText: String {
-        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        SearchService.normalizedQuery(searchText)
     }
 
     private var isSearching: Bool {
@@ -36,34 +36,25 @@ struct ContentView: View {
     }
 
     private var matchingFolders: [Folder] {
-        guard isSearching else { return [] }
-
-        return folders
-            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
-            .sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
+        searchResults.folders
     }
 
     private var matchingContacts: [FriendContact] {
-        guard isSearching else { return [] }
+        searchResults.contacts
+    }
 
-        return contacts
-            .filter { $0.name.localizedCaseInsensitiveContains(normalizedSearchText) }
-            .sorted { lhs, rhs in
-                let leftPath = lhs.folderPath ?? ""
-                let rightPath = rhs.folderPath ?? ""
-
-                if leftPath.caseInsensitiveCompare(rightPath) == .orderedSame {
-                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-                }
-
-                return leftPath.localizedCaseInsensitiveCompare(rightPath) == .orderedAscending
-            }
+    private var searchResults: SearchResults {
+        SearchService.search(
+            query: searchText,
+            folders: folders,
+            contacts: contacts
+        )
     }
 
     private var favoriteContacts: [FriendContact] {
-        contacts
-            .filter { $0.resolvedIsFavorite }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        SearchService.contactsSortedByPath(
+            contacts.filter { $0.resolvedIsFavorite }
+        )
     }
 
     var body: some View {
@@ -162,7 +153,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var searchResultsList: some View {
-        if matchingFolders.isEmpty && matchingContacts.isEmpty {
+        if searchResults.isEmpty {
             ContentUnavailableView.search(text: normalizedSearchText)
         } else {
             List {

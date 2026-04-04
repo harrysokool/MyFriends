@@ -9,12 +9,7 @@ struct ContactDetailView: View {
 
     @State private var isShowingEditContactSheet = false
     @State private var isShowingCallConfirmation = false
-    @State private var contactName = ""
-    @State private var contactRegionCode = PhoneCountry.defaultCountry.regionCode
-    @State private var phoneNumber = ""
-    @State private var email = ""
-    @State private var instagram = ""
-    @State private var notes = ""
+    @State private var contactForm = ContactFormState()
 
     var body: some View {
         List {
@@ -79,12 +74,7 @@ struct ContactDetailView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    contactName = contact.name
-                    contactRegionCode = contact.resolvedPhoneRegionCode
-                    phoneNumber = contact.phoneNumber
-                    email = contact.email ?? ""
-                    instagram = contact.instagram ?? ""
-                    notes = contact.notes ?? ""
+                    contactForm = ContactFormState(contact: contact)
                     isShowingEditContactSheet = true
                 } label: {
                     Image(systemName: "pencil")
@@ -102,46 +92,7 @@ struct ContactDetailView: View {
         }
         .sheet(isPresented: $isShowingEditContactSheet) {
             NavigationStack {
-                Form {
-                    Section("Contact Info") {
-                        TextField("Name", text: $contactName)
-                        Picker("Country", selection: $contactRegionCode) {
-                            ForEach(PhoneCountry.all) { country in
-                                Text(country.displayName).tag(country.regionCode)
-                            }
-                        }
-                        HStack(spacing: 12) {
-                            Text(selectedCountry.dialingCode)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
-
-                            TextField("Phone Number", text: $phoneNumber)
-                                .keyboardType(.phonePad)
-                        }
-
-                        if let phoneValidationMessage {
-                            Text(phoneValidationMessage)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                        }
-
-                        TextField("Email", text: $email)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                        TextField("Instagram", text: $instagram)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
-
-                    Section("Notes") {
-                        TextField("Notes", text: $notes, axis: .vertical)
-                            .lineLimit(3...6)
-                    }
-                }
+                ContactFormView(formState: $contactForm)
                 .navigationTitle("Edit Contact")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -156,44 +107,12 @@ struct ContactDetailView: View {
                         Button("Save") {
                             saveContact()
                         }
-                        .disabled(!canSaveContact)
+                        .disabled(!contactForm.canSave)
                     }
                 }
             }
             .presentationDetents([.medium])
         }
-    }
-
-    private var trimmedContactName: String {
-        contactName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var selectedCountry: PhoneCountry {
-        PhoneCountry.country(for: contactRegionCode)
-    }
-
-    private var trimmedPhoneNumber: String {
-        PhoneNumberValidator.normalizedInput(phoneNumber)
-    }
-
-    private var trimmedEmail: String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedInstagram: String {
-        instagram.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var trimmedNotes: String {
-        notes.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var phoneValidationMessage: String? {
-        PhoneNumberValidator.validationMessage(for: phoneNumber)
-    }
-
-    private var canSaveContact: Bool {
-        !trimmedContactName.isEmpty && phoneValidationMessage == nil
     }
 
     private var callablePhoneNumber: String? {
@@ -285,16 +204,13 @@ struct ContactDetailView: View {
     }
 
     private func saveContact() {
-        contact.name = trimmedContactName
-        contact.phoneRegionCode = selectedCountry.regionCode
-        contact.phoneDialingCode = selectedCountry.dialingCode
-        contact.phoneNumber = PhoneNumberValidator.storageValue(
-            from: trimmedPhoneNumber,
-            dialingCode: selectedCountry.dialingCode
-        )
-        contact.email = optionalValue(from: trimmedEmail)
-        contact.instagram = optionalValue(from: trimmedInstagram)
-        contact.notes = optionalValue(from: trimmedNotes)
+        contact.name = contactForm.trimmedName
+        contact.phoneRegionCode = contactForm.selectedCountry.regionCode
+        contact.phoneDialingCode = contactForm.selectedCountry.dialingCode
+        contact.phoneNumber = contactForm.storedPhoneNumber
+        contact.email = contactForm.optionalValue(contactForm.trimmedEmail)
+        contact.instagram = contactForm.optionalValue(contactForm.trimmedInstagram)
+        contact.notes = contactForm.optionalValue(contactForm.trimmedNotes)
 
         do {
             try modelContext.save()
@@ -306,12 +222,7 @@ struct ContactDetailView: View {
     }
 
     private func resetFields() {
-        contactName = ""
-        contactRegionCode = PhoneCountry.defaultCountry.regionCode
-        phoneNumber = ""
-        email = ""
-        instagram = ""
-        notes = ""
+        contactForm.reset()
     }
 
     @ViewBuilder
@@ -332,10 +243,6 @@ struct ContactDetailView: View {
         guard let value else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func optionalValue(from value: String) -> String? {
-        value.isEmpty ? nil : value
     }
 
     private func callContact() {
