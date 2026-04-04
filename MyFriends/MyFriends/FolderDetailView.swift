@@ -25,99 +25,82 @@ struct FolderDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if subfolders.isEmpty && contacts.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.blue)
+        List {
+            Section("Subfolders") {
+                if subfolders.isEmpty {
+                    sectionPlaceholder("No subfolders yet")
+                } else {
+                    ForEach(subfolders) { subfolder in
+                        NavigationLink {
+                            FolderDetailView(folder: subfolder)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.blue)
 
-                    Text(folder.name)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Text("No contacts or subfolders yet")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding()
-            } else {
-                List {
-                    if !subfolders.isEmpty {
-                        Section("Subfolders") {
-                            ForEach(subfolders) { subfolder in
-                                NavigationLink {
-                                    FolderDetailView(folder: subfolder)
-                                } label: {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "folder.fill")
-                                            .foregroundStyle(.blue)
-
-                                        Text(subfolder.name)
-                                            .font(.body)
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                                .swipeActions {
-                                    Button(role: .destructive) {
-                                        deleteFolder(subfolder)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                    Button {
-                                        startEditing(folder: subfolder)
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    .tint(.blue)
-                                }
+                                Text(subfolder.name)
+                                    .font(.body)
+                            }
+                            .padding(.vertical, 6)
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                deleteFolder(subfolder)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
                             }
                         }
-                    }
-
-                    if !contacts.isEmpty {
-                        Section("Contacts") {
-                            ForEach(contacts) { contact in
-                                NavigationLink {
-                                    ContactDetailView(contact: contact)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(contact.name)
-                                            .font(.body)
-                                            .fontWeight(.medium)
-
-                                        Text(contact.phoneNumber)
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                                .swipeActions {
-                                    Button(role: .destructive) {
-                                        deleteContact(contact)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                    Button {
-                                        startEditing(contact: contact)
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    .tint(.blue)
-                                }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                startEditing(folder: subfolder)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
                             }
+                            .tint(.blue)
                         }
                     }
                 }
-                .listStyle(.plain)
+            }
+
+            Section("Contacts") {
+                if contacts.isEmpty {
+                    sectionPlaceholder("No contacts yet")
+                } else {
+                    ForEach(contacts) { contact in
+                        NavigationLink {
+                            ContactDetailView(contact: contact)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(contact.name)
+                                    .font(.body)
+                                    .fontWeight(.medium)
+
+                                Text(contact.phoneNumber)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 6)
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                deleteContact(contact)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                startEditing(contact: contact)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
+                    }
+                }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(folder.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -225,6 +208,15 @@ struct FolderDetailView: View {
 
     private var contactSheetActionTitle: String {
         contactBeingEdited == nil ? "Save" : "Update"
+    }
+
+    @ViewBuilder
+    private func sectionPlaceholder(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
     }
 
     private func addSubfolder() {
