@@ -31,6 +31,8 @@ final class Folder {
 final class FriendContact {
     var name: String
     var phoneNumber: String
+    var phoneRegionCode: String?
+    var phoneDialingCode: String?
     var email: String?
     var instagram: String?
     var notes: String?
@@ -40,6 +42,8 @@ final class FriendContact {
     init(
         name: String,
         phoneNumber: String,
+        phoneRegionCode: String = PhoneCountry.defaultCountry.regionCode,
+        phoneDialingCode: String = PhoneCountry.defaultCountry.dialingCode,
         email: String? = nil,
         instagram: String? = nil,
         notes: String? = nil,
@@ -48,11 +52,25 @@ final class FriendContact {
     ) {
         self.name = name
         self.phoneNumber = phoneNumber
+        self.phoneRegionCode = phoneRegionCode
+        self.phoneDialingCode = phoneDialingCode
         self.email = email
         self.instagram = instagram
         self.notes = notes
         self.createdAt = createdAt
         self.folder = folder
+    }
+
+    var resolvedPhoneRegionCode: String {
+        phoneRegionCode ?? PhoneCountry.defaultCountry.regionCode
+    }
+
+    var resolvedPhoneDialingCode: String {
+        phoneDialingCode ?? PhoneCountry.defaultCountry.dialingCode
+    }
+
+    var formattedPhoneNumber: String {
+        "\(resolvedPhoneDialingCode) \(phoneNumber)"
     }
 }
 

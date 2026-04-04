@@ -3,11 +3,14 @@ import SwiftData
 
 struct ContactDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
 
     let contact: FriendContact
 
     @State private var isShowingEditContactSheet = false
+    @State private var isShowingCallConfirmation = false
     @State private var contactName = ""
+    @State private var contactRegionCode = PhoneCountry.defaultCountry.regionCode
     @State private var phoneNumber = ""
     @State private var email = ""
     @State private var instagram = ""
@@ -28,7 +31,7 @@ struct ContactDetailView: View {
                             .font(.title3)
                             .fontWeight(.semibold)
 
-                        Text(contact.phoneNumber)
+                        Text(contact.formattedPhoneNumber)
                             .font(.body)
                             .foregroundStyle(.secondary)
                     }
@@ -37,7 +40,7 @@ struct ContactDetailView: View {
             }
 
             Section("Details") {
-                detailRow(title: "Phone", value: contact.phoneNumber)
+                phoneRow
 
                 if let email = displayValue(contact.email) {
                     detailRow(title: "Email", value: email)
@@ -68,6 +71,7 @@ struct ContactDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     contactName = contact.name
+                    contactRegionCode = contact.resolvedPhoneRegionCode
                     phoneNumber = contact.phoneNumber
                     email = contact.email ?? ""
                     instagram = contact.instagram ?? ""
@@ -78,13 +82,36 @@ struct ContactDetailView: View {
                 }
             }
         }
+        .alert("Call \(contact.name)?", isPresented: $isShowingCallConfirmation) {
+            Button("Cancel", role: .cancel) {}
+
+            Button("Call") {
+                callContact()
+            }
+        } message: {
+            Text("This will open the Phone app.")
+        }
         .sheet(isPresented: $isShowingEditContactSheet) {
             NavigationStack {
                 Form {
                     Section("Contact Info") {
                         TextField("Name", text: $contactName)
-                        TextField("Phone Number", text: $phoneNumber)
-                            .keyboardType(.phonePad)
+                        Picker("Country", selection: $contactRegionCode) {
+                            ForEach(PhoneCountry.all) { country in
+                                Text(country.displayName).tag(country.regionCode)
+                            }
+                        }
+                        HStack(spacing: 12) {
+                            Text(selectedCountry.dialingCode)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+
+                            TextField("Phone Number", text: $phoneNumber)
+                                .keyboardType(.phonePad)
+                        }
                         TextField("Email", text: $email)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
@@ -125,6 +152,10 @@ struct ContactDetailView: View {
         contactName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var selectedCountry: PhoneCountry {
+        PhoneCountry.country(for: contactRegionCode)
+    }
+
     private var trimmedPhoneNumber: String {
         phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -141,8 +172,50 @@ struct ContactDetailView: View {
         notes.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var callablePhoneNumber: String? {
+        let allowedCharacters = CharacterSet(charactersIn: "+0123456789")
+        let rawNumber = "\(contact.resolvedPhoneDialingCode)\(contact.phoneNumber)"
+        let sanitized = rawNumber.unicodeScalars.filter { allowedCharacters.contains($0) }
+        let result = String(String.UnicodeScalarView(sanitized))
+
+        return result.isEmpty ? nil : result
+    }
+
+    @ViewBuilder
+    private var phoneRow: some View {
+        if callablePhoneNumber != nil {
+            Button {
+                isShowingCallConfirmation = true
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Phone")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+
+                        Text(contact.formattedPhoneNumber)
+                            .font(.body)
+                            .foregroundStyle(.blue)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "phone.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.blue)
+                }
+                .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+        } else {
+            detailRow(title: "Phone", value: contact.phoneNumber)
+        }
+    }
+
     private func saveContact() {
         contact.name = trimmedContactName
+        contact.phoneRegionCode = selectedCountry.regionCode
+        contact.phoneDialingCode = selectedCountry.dialingCode
         contact.phoneNumber = trimmedPhoneNumber
         contact.email = optionalValue(from: trimmedEmail)
         contact.instagram = optionalValue(from: trimmedInstagram)
@@ -159,6 +232,7 @@ struct ContactDetailView: View {
 
     private func resetFields() {
         contactName = ""
+        contactRegionCode = PhoneCountry.defaultCountry.regionCode
         phoneNumber = ""
         email = ""
         instagram = ""
@@ -188,6 +262,17 @@ struct ContactDetailView: View {
     private func optionalValue(from value: String) -> String? {
         value.isEmpty ? nil : value
     }
+
+    private func callContact() {
+        guard
+            let callablePhoneNumber,
+            let url = URL(string: "tel://\(callablePhoneNumber)")
+        else {
+            return
+        }
+
+        openURL(url)
+    }
 }
 
 #Preview {
@@ -196,6 +281,8 @@ struct ContactDetailView: View {
             contact: FriendContact(
                 name: "Alex",
                 phoneNumber: "555-123-4567",
+                phoneRegionCode: "US",
+                phoneDialingCode: "+1",
                 email: "alex@example.com",
                 instagram: "@alex",
                 notes: "Met through work."

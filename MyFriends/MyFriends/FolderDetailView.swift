@@ -13,6 +13,7 @@ struct FolderDetailView: View {
     @State private var editedFolderName = ""
     @State private var searchText = ""
     @State private var contactName = ""
+    @State private var contactRegionCode = PhoneCountry.defaultCountry.regionCode
     @State private var contactPhoneNumber = ""
     @State private var contactEmail = ""
     @State private var contactInstagram = ""
@@ -114,7 +115,7 @@ struct FolderDetailView: View {
                                         .font(.body)
                                         .fontWeight(.semibold)
 
-                                    Text(contact.phoneNumber)
+                                    Text(contact.formattedPhoneNumber)
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                 }
@@ -207,8 +208,23 @@ struct FolderDetailView: View {
                 Form {
                     Section("Contact Info") {
                         TextField("Name", text: $contactName)
-                        TextField("Phone Number", text: $contactPhoneNumber)
-                            .keyboardType(.phonePad)
+                        Picker("Country", selection: $contactRegionCode) {
+                            ForEach(PhoneCountry.all) { country in
+                                Text(country.displayName).tag(country.regionCode)
+                            }
+                        }
+
+                        HStack(spacing: 12) {
+                            Text(selectedCountry.dialingCode)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+
+                            TextField("Phone Number", text: $contactPhoneNumber)
+                                .keyboardType(.phonePad)
+                        }
                         TextField("Email", text: $contactEmail)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
@@ -255,6 +271,10 @@ struct FolderDetailView: View {
 
     private var trimmedContactName: String {
         contactName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var selectedCountry: PhoneCountry {
+        PhoneCountry.country(for: contactRegionCode)
     }
 
     private var trimmedPhoneNumber: String {
@@ -356,6 +376,7 @@ struct FolderDetailView: View {
     private func startEditing(contact: FriendContact) {
         contactBeingEdited = contact
         contactName = contact.name
+        contactRegionCode = contact.resolvedPhoneRegionCode
         contactPhoneNumber = contact.phoneNumber
         contactEmail = contact.email ?? ""
         contactInstagram = contact.instagram ?? ""
@@ -367,6 +388,8 @@ struct FolderDetailView: View {
         if let contactBeingEdited {
             contactBeingEdited.name = trimmedContactName
             contactBeingEdited.phoneNumber = trimmedPhoneNumber
+            contactBeingEdited.phoneRegionCode = selectedCountry.regionCode
+            contactBeingEdited.phoneDialingCode = selectedCountry.dialingCode
             contactBeingEdited.email = optionalValue(from: trimmedEmail)
             contactBeingEdited.instagram = optionalValue(from: trimmedInstagram)
             contactBeingEdited.notes = optionalValue(from: trimmedNotes)
@@ -374,6 +397,8 @@ struct FolderDetailView: View {
             let contact = FriendContact(
                 name: trimmedContactName,
                 phoneNumber: trimmedPhoneNumber,
+                phoneRegionCode: selectedCountry.regionCode,
+                phoneDialingCode: selectedCountry.dialingCode,
                 email: optionalValue(from: trimmedEmail),
                 instagram: optionalValue(from: trimmedInstagram),
                 notes: optionalValue(from: trimmedNotes),
@@ -409,6 +434,7 @@ struct FolderDetailView: View {
 
     private func resetContactFields() {
         contactName = ""
+        contactRegionCode = PhoneCountry.defaultCountry.regionCode
         contactPhoneNumber = ""
         contactEmail = ""
         contactInstagram = ""
