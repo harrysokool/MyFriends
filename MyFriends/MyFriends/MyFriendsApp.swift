@@ -13,6 +13,7 @@ struct MyFriendsApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Folder.self,
+            FriendContact.self,
             Item.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

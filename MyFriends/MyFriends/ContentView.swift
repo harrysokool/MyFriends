@@ -88,5 +88,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Folder.self, inMemory: true)
+        .modelContainer(for: [Folder.self, FriendContact.self], inMemory: true)
 }

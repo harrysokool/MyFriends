@@ -17,10 +17,33 @@ final class Folder {
     @Relationship(deleteRule: .cascade, inverse: \Folder.parent)
     var childFolders: [Folder] = []
 
+    @Relationship(deleteRule: .cascade, inverse: \FriendContact.folder)
+    var contacts: [FriendContact] = []
+
     init(name: String, createdAt: Date = .now, parent: Folder? = nil) {
         self.name = name
         self.createdAt = createdAt
         self.parent = parent
+    }
+}
+
+@Model
+final class FriendContact {
+    var name: String
+    var phoneNumber: String
+    var createdAt: Date
+    var folder: Folder?
+
+    init(
+        name: String,
+        phoneNumber: String,
+        createdAt: Date = .now,
+        folder: Folder? = nil
+    ) {
+        self.name = name
+        self.phoneNumber = phoneNumber
+        self.createdAt = createdAt
+        self.folder = folder
     }
 }
 
