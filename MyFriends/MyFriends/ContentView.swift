@@ -13,12 +13,14 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var folderBeingEdited: Folder?
 
+    // find all the root folders, where the folder has no parent and sort by the createdAt
     private var rootFolders: [Folder] {
         folders
             .filter { $0.parent == nil }
             .sorted { $0.createdAt < $1.createdAt }
     }
 
+    
     private var filteredFolders: [Folder] {
         guard !normalizedSearchText.isEmpty else { return rootFolders }
 

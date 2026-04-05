@@ -14,7 +14,6 @@ struct MyFriendsApp: App {
         let schema = Schema([
             Folder.self,
             FriendContact.self,
-            Item.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
