@@ -2,11 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct FolderDetailView: View {
+    // MARK: - Data
+
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Folder.createdAt) private var allFolders: [Folder]
     @Query(sort: \FriendContact.createdAt) private var allContacts: [FriendContact]
 
     let folder: Folder
+
+    // MARK: - View State
 
     @State private var isShowingAddSubfolderAlert = false
     @State private var isShowingEditFolderAlert = false
@@ -81,30 +85,7 @@ struct FolderDetailView: View {
             placement: .navigationBarDrawer(displayMode: .automatic),
             prompt: "Search folders and contacts"
         )
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    startEditing(folder: folder)
-                } label: {
-                    Image(systemName: "pencil")
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("New Subfolder", systemImage: "folder.badge.plus") {
-                        newSubfolderName = ""
-                        isShowingAddSubfolderAlert = true
-                    }
-
-                    Button("New Contact", systemImage: "person.badge.plus") {
-                        startAddingContact()
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
+        .toolbar { toolbarContent }
         .alert("New Subfolder", isPresented: $isShowingAddSubfolderAlert) {
             TextField("Subfolder name", text: $newSubfolderName)
 
@@ -133,30 +114,10 @@ struct FolderDetailView: View {
         } message: {
             Text("Update the folder name.")
         }
-        .sheet(isPresented: $isShowingContactSheet) {
-            NavigationStack {
-                ContactFormView(formState: $contactForm)
-                .navigationTitle(contactSheetTitle)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") {
-                            resetContactFields()
-                            isShowingContactSheet = false
-                        }
-                    }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button(contactSheetActionTitle) {
-                            saveContact()
-                        }
-                        .disabled(!contactForm.canSave)
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-        }
+        .sheet(isPresented: $isShowingContactSheet) { contactSheet }
     }
+
+    // MARK: - Content
 
     private var localContentList: some View {
         List {
@@ -177,6 +138,54 @@ struct FolderDetailView: View {
             )
         }
         .listStyle(.insetGrouped)
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                startEditing(folder: folder)
+            } label: {
+                Image(systemName: "pencil")
+            }
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button("New Subfolder", systemImage: "folder.badge.plus") {
+                    startAddingSubfolder()
+                }
+
+                Button("New Contact", systemImage: "person.badge.plus") {
+                    startAddingContact()
+                }
+            } label: {
+                Image(systemName: "plus")
+            }
+        }
+    }
+
+    private var contactSheet: some View {
+        NavigationStack {
+            ContactFormView(formState: $contactForm)
+                .navigationTitle(contactSheetTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Cancel") {
+                            dismissContactSheet()
+                        }
+                    }
+
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(contactSheetActionTitle) {
+                            saveContact()
+                        }
+                        .disabled(!contactForm.canSave)
+                    }
+                }
+        }
+        .presentationDetents([.medium])
     }
 
     private var globalSearchResultsList: some View {
@@ -244,6 +253,13 @@ struct FolderDetailView: View {
         }
 
         return "No matching contacts"
+    }
+
+    // MARK: - Actions
+
+    private func startAddingSubfolder() {
+        newSubfolderName = ""
+        isShowingAddSubfolderAlert = true
     }
 
     private func addSubfolder() {
@@ -330,6 +346,11 @@ struct FolderDetailView: View {
     private func resetFolderEditing() {
         folderBeingEdited = nil
         editedFolderName = ""
+    }
+
+    private func dismissContactSheet() {
+        resetContactFields()
+        isShowingContactSheet = false
     }
 
     private func resetContactFields() {

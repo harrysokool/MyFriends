@@ -2,11 +2,15 @@ import SwiftUI
 import SwiftData
 
 struct ContactDetailView: View {
+    // MARK: - Data
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Query(sort: \Folder.createdAt) private var folders: [Folder]
 
     let contact: FriendContact
+
+    // MARK: - View State
 
     @State private var isShowingEditContactSheet = false
     @State private var isShowingInteractionSheet = false
@@ -18,98 +22,14 @@ struct ContactDetailView: View {
 
     var body: some View {
         List {
-            Section {
-                HStack(spacing: 16) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.green)
-                        .frame(width: 56, height: 56)
-                        .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(contact.name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-
-                        Text(contact.formattedPhoneNumber)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(.vertical, 6)
-            }
-
-            Section("Details") {
-                phoneRow
-
-                if let email = displayValue(contact.email) {
-                    detailRow(title: "Email", value: email)
-                }
-
-                if let instagram = displayValue(contact.instagram) {
-                    instagramRow(displayValue: instagram)
-                }
-
-                if let notes = displayValue(contact.notes) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Notes")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-
-                        Text(notes)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                interactionSection
-            }
-
-            Section("Actions") {
-                Button {
-                    isShowingMoveToFolderSheet = true
-                } label: {
-                    HStack {
-                        Text("Move to Folder")
-                        Spacer()
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
+            contactHeaderSection
+            contactDetailsSection
+            actionsSection
         }
         .listStyle(.insetGrouped)
         .navigationTitle(contact.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    toggleFavorite()
-                } label: {
-                    Image(systemName: contact.resolvedIsFavorite ? "star.fill" : "star")
-                }
-                .tint(contact.resolvedIsFavorite ? .yellow : .primary)
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    startEditingInteraction()
-                } label: {
-                    Image(systemName: "bubble.left.and.bubble.right")
-                }
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    contactForm = ContactFormState(contact: contact)
-                    isShowingEditContactSheet = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-            }
-        }
+        .toolbar { toolbarContent }
         .alert("Call \(contact.name)?", isPresented: $isShowingCallConfirmation) {
             Button("Cancel", role: .cancel) {}
 
@@ -119,16 +39,109 @@ struct ContactDetailView: View {
         } message: {
             Text("This will open the Phone app.")
         }
-        .sheet(isPresented: $isShowingEditContactSheet) {
-            NavigationStack {
-                ContactFormView(formState: $contactForm)
+        .sheet(isPresented: $isShowingEditContactSheet) { editContactSheet }
+        .sheet(isPresented: $isShowingInteractionSheet) { interactionSheet }
+        .sheet(isPresented: $isShowingMoveToFolderSheet) { moveToFolderSheet }
+    }
+
+    // MARK: - Content
+
+    private var contactHeaderSection: some View {
+        Section {
+            HStack(spacing: 16) {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.green)
+                    .frame(width: 56, height: 56)
+                    .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(contact.name)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+
+                    Text(contact.formattedPhoneNumber)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+    }
+
+    private var contactDetailsSection: some View {
+        Section("Details") {
+            phoneRow
+
+            if let email = displayValue(contact.email) {
+                detailRow(title: "Email", value: email)
+            }
+
+            if let instagram = displayValue(contact.instagram) {
+                instagramRow(displayValue: instagram)
+            }
+
+            if let notes = displayValue(contact.notes) {
+                multilineDetailRow(title: "Notes", value: notes)
+            }
+
+            interactionSection
+        }
+    }
+
+    private var actionsSection: some View {
+        Section("Actions") {
+            Button {
+                isShowingMoveToFolderSheet = true
+            } label: {
+                HStack {
+                    Text("Move to Folder")
+                    Spacer()
+                    Image(systemName: "folder")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                toggleFavorite()
+            } label: {
+                Image(systemName: contact.resolvedIsFavorite ? "star.fill" : "star")
+            }
+            .tint(contact.resolvedIsFavorite ? .yellow : .primary)
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                startEditingInteraction()
+            } label: {
+                Image(systemName: "bubble.left.and.bubble.right")
+            }
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                startEditingContact()
+            } label: {
+                Image(systemName: "pencil")
+            }
+        }
+    }
+
+    private var editContactSheet: some View {
+        NavigationStack {
+            ContactFormView(formState: $contactForm)
                 .navigationTitle("Edit Contact")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Cancel") {
-                            resetFields()
-                            isShowingEditContactSheet = false
+                            dismissEditContactSheet()
                         }
                     }
 
@@ -139,85 +152,59 @@ struct ContactDetailView: View {
                         .disabled(!contactForm.canSave)
                     }
                 }
-            }
-            .presentationDetents([.medium])
         }
-        .sheet(isPresented: $isShowingInteractionSheet) {
-            NavigationStack {
-                Form {
-                    Section("Interaction") {
-                        DatePicker(
-                            "Date",
-                            selection: $interactionDate,
-                            displayedComponents: [.date, .hourAndMinute]
-                        )
+        .presentationDetents([.medium])
+    }
 
-                        TextField("Interaction note", text: $interactionNote, axis: .vertical)
-                            .lineLimit(3...6)
-                    }
-                }
-                .navigationTitle("Log Interaction")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") {
-                            resetInteractionFields()
-                            isShowingInteractionSheet = false
-                        }
-                    }
+    private var interactionSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Interaction") {
+                    DatePicker(
+                        "Date",
+                        selection: $interactionDate,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
 
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Save") {
-                            saveInteraction()
-                        }
-                    }
+                    TextField("Interaction note", text: $interactionNote, axis: .vertical)
+                        .lineLimit(3...6)
                 }
             }
-            .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $isShowingMoveToFolderSheet) {
-            NavigationStack {
-                List {
-                    Section("Select Destination") {
-                        ForEach(sortedFolders) { folder in
-                            Button {
-                                moveContact(to: folder)
-                            } label: {
-                                HStack(spacing: 12) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(folder.name)
-                                            .font(.body)
-                                            .fontWeight(.semibold)
-
-                                        Text(folder.fullPath)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(2)
-                                    }
-
-                                    Spacer()
-
-                                    if isCurrentFolder(folder) {
-                                        Image(systemName: "checkmark")
-                                            .font(.footnote.weight(.semibold))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(isCurrentFolder(folder))
-                        }
+            .navigationTitle("Log Interaction")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        dismissInteractionSheet()
                     }
                 }
-                .listStyle(.insetGrouped)
-                .navigationTitle("Move to Folder")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Cancel") {
-                            isShowingMoveToFolderSheet = false
-                        }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        saveInteraction()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var moveToFolderSheet: some View {
+        NavigationStack {
+            List {
+                Section("Select Destination") {
+                    ForEach(sortedFolders) { folder in
+                        destinationFolderRow(for: folder)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Move to Folder")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") {
+                        isShowingMoveToFolderSheet = false
                     }
                 }
             }
@@ -231,16 +218,7 @@ struct ContactDetailView: View {
         }
 
         if let interactionNote = displayValue(contact.interactionNote) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Interaction Note")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-
-                Text(interactionNote)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 4)
+            multilineDetailRow(title: "Interaction Note", value: interactionNote)
         }
     }
 
@@ -264,18 +242,18 @@ struct ContactDetailView: View {
     private var instagramUsername: String? {
         guard let instagram = displayValue(contact.instagram) else { return nil }
 
-        let trimmedUsername = instagram
+        let sanitizedUsername = instagram
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "@"))
 
-        guard !trimmedUsername.isEmpty else { return nil }
+        guard !sanitizedUsername.isEmpty else { return nil }
 
         let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._"))
-        let isValid = trimmedUsername.unicodeScalars.allSatisfy { allowedCharacters.contains($0) }
+        let isValidUsername = sanitizedUsername.unicodeScalars.allSatisfy { allowedCharacters.contains($0) }
 
-        guard isValid else { return nil }
+        guard isValidUsername else { return nil }
 
-        return trimmedUsername
+        return sanitizedUsername
     }
 
     @ViewBuilder
@@ -340,6 +318,42 @@ struct ContactDetailView: View {
         }
     }
 
+    private func destinationFolderRow(for folder: Folder) -> some View {
+        Button {
+            moveContact(to: folder)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(folder.name)
+                        .font(.body)
+                        .fontWeight(.semibold)
+
+                    Text(folder.fullPath)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                if isCurrentFolder(folder) {
+                    Image(systemName: "checkmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .disabled(isCurrentFolder(folder))
+    }
+
+    // The form state mirrors the edit sheet fields, so it resets when the sheet closes.
+    private func startEditingContact() {
+        contactForm = ContactFormState(contact: contact)
+        isShowingEditContactSheet = true
+    }
+
     private func saveContact() {
         ContactPersistenceService.apply(contactForm, to: contact)
 
@@ -354,6 +368,11 @@ struct ContactDetailView: View {
 
     private func resetFields() {
         contactForm.reset()
+    }
+
+    private func dismissEditContactSheet() {
+        resetFields()
+        isShowingEditContactSheet = false
     }
 
     private func startEditingInteraction() {
@@ -380,6 +399,11 @@ struct ContactDetailView: View {
         interactionNote = ""
     }
 
+    private func dismissInteractionSheet() {
+        resetInteractionFields()
+        isShowingInteractionSheet = false
+    }
+
     private func isCurrentFolder(_ folder: Folder) -> Bool {
         guard let currentFolder = contact.folder else { return false }
         return currentFolder === folder
@@ -401,6 +425,19 @@ struct ContactDetailView: View {
     @ViewBuilder
     private func detailRow(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+
+            Text(value)
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func multilineDetailRow(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.semibold)

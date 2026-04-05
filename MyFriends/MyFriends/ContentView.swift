@@ -2,9 +2,13 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    // MARK: - Data
+
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Folder.createdAt) private var folders: [Folder]
     @Query(sort: \FriendContact.createdAt) private var contacts: [FriendContact]
+
+    // MARK: - View State
 
     @State private var isShowingAddFolderAlert = false
     @State private var isShowingEditFolderAlert = false
@@ -13,14 +17,13 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var folderBeingEdited: Folder?
 
-    // find all the root folders, where the folder has no parent and sort by the createdAt
+    // Root folders drive the top-level navigation list.
     private var rootFolders: [Folder] {
         folders
             .filter { $0.parent == nil }
             .sorted { $0.createdAt < $1.createdAt }
     }
 
-    
     private var filteredFolders: [Folder] {
         guard !normalizedSearchText.isEmpty else { return rootFolders }
 
@@ -59,59 +62,26 @@ struct ContentView: View {
         )
     }
 
+    private var isShowingFavoritesRow: Bool {
+        !favoriteContacts.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Group {
                 if isSearching {
                     searchResultsList
                 } else if rootFolders.isEmpty {
-                    ContentUnavailableView(
-                        "No Folders Yet",
-                        systemImage: "folder",
-                        description: Text("Tap the + button to create your first folder.")
-                    )
+                    emptyStateView
                 } else {
-                    List {
-                        if !favoriteContacts.isEmpty {
-                            NavigationLink {
-                                FavoritesView()
-                            } label: {
-                                FavoritesRowView(count: favoriteContacts.count)
-                            }
-                        }
-
-                        ForEach(filteredFolders) { folder in
-                            NavigationLink {
-                                FolderDetailView(folder: folder)
-                            } label: {
-                                FolderRowView(name: folder.name, subtitle: "Folder")
-                            }
-                            .swipeActions {
-                                Button(role: .destructive) {
-                                    deleteFolder(folder)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button {
-                                    startEditing(folder)
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(.blue)
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
+                    folderList
                 }
             }
             .navigationTitle("MyFriends")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        newFolderName = ""
-                        isShowingAddFolderAlert = true
+                        startAddingFolder()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -151,6 +121,33 @@ struct ContentView: View {
                 prompt: "Search folders and contacts"
             )
         }
+    }
+
+    // MARK: - Content
+
+    private var emptyStateView: some View {
+        ContentUnavailableView(
+            "No Folders Yet",
+            systemImage: "folder",
+            description: Text("Tap the + button to create your first folder.")
+        )
+    }
+
+    private var folderList: some View {
+        List {
+            if isShowingFavoritesRow {
+                NavigationLink {
+                    FavoritesView()
+                } label: {
+                    FavoritesRowView(count: favoriteContacts.count)
+                }
+            }
+
+            ForEach(filteredFolders) { folder in
+                folderRow(for: folder)
+            }
+        }
+        .listStyle(.plain)
     }
 
     @ViewBuilder
@@ -197,6 +194,29 @@ struct ContentView: View {
         }
     }
 
+    private func folderRow(for folder: Folder) -> some View {
+        NavigationLink {
+            FolderDetailView(folder: folder)
+        } label: {
+            FolderRowView(name: folder.name, subtitle: "Folder")
+        }
+        .swipeActions {
+            Button(role: .destructive) {
+                deleteFolder(folder)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                startEditing(folder)
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            .tint(.blue)
+        }
+    }
+
     private var trimmedFolderName: String {
         newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -212,6 +232,13 @@ struct ContentView: View {
 
     private var trimmedEditedFolderName: String {
         editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Actions
+
+    private func startAddingFolder() {
+        newFolderName = ""
+        isShowingAddFolderAlert = true
     }
 
     private func addFolder() {

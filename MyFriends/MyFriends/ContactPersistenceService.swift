@@ -1,26 +1,35 @@
 import Foundation
 
 enum ContactPersistenceService {
+    // Keeps form-to-model mapping in one place so the views can stay focused on UI flow.
     static func apply(_ formState: ContactFormState, to contact: FriendContact) {
+        let selectedCountry = formState.selectedCountry
+
         contact.name = formState.trimmedName
         contact.phoneNumber = formState.storedPhoneNumber
-        contact.phoneRegionCode = formState.selectedCountry.regionCode
-        contact.phoneDialingCode = formState.selectedCountry.dialingCode
-        contact.email = formState.optionalValue(formState.trimmedEmail)
-        contact.instagram = formState.optionalValue(formState.trimmedInstagram)
-        contact.notes = formState.optionalValue(formState.trimmedNotes)
+        contact.phoneRegionCode = selectedCountry.regionCode
+        contact.phoneDialingCode = selectedCountry.dialingCode
+        contact.email = optionalValue(formState.trimmedEmail, from: formState)
+        contact.instagram = optionalValue(formState.trimmedInstagram, from: formState)
+        contact.notes = optionalValue(formState.trimmedNotes, from: formState)
     }
 
     static func makeContact(from formState: ContactFormState, in folder: Folder) -> FriendContact {
-        FriendContact(
+        let selectedCountry = formState.selectedCountry
+
+        return FriendContact(
             name: formState.trimmedName,
             phoneNumber: formState.storedPhoneNumber,
-            phoneRegionCode: formState.selectedCountry.regionCode,
-            phoneDialingCode: formState.selectedCountry.dialingCode,
-            email: formState.optionalValue(formState.trimmedEmail),
-            instagram: formState.optionalValue(formState.trimmedInstagram),
-            notes: formState.optionalValue(formState.trimmedNotes),
+            phoneRegionCode: selectedCountry.regionCode,
+            phoneDialingCode: selectedCountry.dialingCode,
+            email: optionalValue(formState.trimmedEmail, from: formState),
+            instagram: optionalValue(formState.trimmedInstagram, from: formState),
+            notes: optionalValue(formState.trimmedNotes, from: formState),
             folder: folder
         )
+    }
+
+    private static func optionalValue(_ value: String, from formState: ContactFormState) -> String? {
+        formState.optionalValue(value)
     }
 }

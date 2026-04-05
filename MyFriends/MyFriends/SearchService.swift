@@ -10,6 +10,7 @@ struct SearchResults {
 }
 
 enum SearchService {
+    // Trimming once keeps matching rules consistent across screens.
     static func normalizedQuery(_ query: String) -> String {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -19,22 +20,22 @@ enum SearchService {
         folders: [Folder],
         contacts: [FriendContact]
     ) -> SearchResults {
-        let normalizedQuery = normalizedQuery(query)
+        let trimmedQuery = normalizedQuery(query)
 
-        guard !normalizedQuery.isEmpty else {
+        guard !trimmedQuery.isEmpty else {
             return SearchResults(folders: [], contacts: [])
         }
 
         return SearchResults(
-            folders: foldersMatching(normalizedQuery, in: folders),
-            contacts: contactsMatching(normalizedQuery, in: contacts)
+            folders: foldersMatching(trimmedQuery, in: folders),
+            contacts: contactsMatching(trimmedQuery, in: contacts)
         )
     }
 
     static func foldersMatching(_ query: String, in folders: [Folder]) -> [Folder] {
         folders
             .filter { $0.name.localizedCaseInsensitiveContains(query) }
-            .sorted { $0.fullPath.localizedCaseInsensitiveCompare($1.fullPath) == .orderedAscending }
+            .sorted(by: areFoldersInAscendingPathOrder)
     }
 
     static func contactsMatching(_ query: String, in contacts: [FriendContact]) -> [FriendContact] {
@@ -44,15 +45,21 @@ enum SearchService {
     }
 
     static func contactsSortedByPath(_ contacts: [FriendContact]) -> [FriendContact] {
-        contacts.sorted { lhs, rhs in
-            let leftPath = lhs.folderPath ?? ""
-            let rightPath = rhs.folderPath ?? ""
+        contacts.sorted(by: areContactsInAscendingFolderOrder)
+    }
 
-            if leftPath.caseInsensitiveCompare(rightPath) == .orderedSame {
-                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-            }
+    nonisolated private static func areFoldersInAscendingPathOrder(_ lhs: Folder, _ rhs: Folder) -> Bool {
+        lhs.fullPath.localizedCaseInsensitiveCompare(rhs.fullPath) == .orderedAscending
+    }
 
-            return leftPath.localizedCaseInsensitiveCompare(rightPath) == .orderedAscending
+    nonisolated private static func areContactsInAscendingFolderOrder(_ lhs: FriendContact, _ rhs: FriendContact) -> Bool {
+        let leftFolderPath = lhs.folderPath ?? ""
+        let rightFolderPath = rhs.folderPath ?? ""
+
+        if leftFolderPath.caseInsensitiveCompare(rightFolderPath) == .orderedSame {
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
+
+        return leftFolderPath.localizedCaseInsensitiveCompare(rightFolderPath) == .orderedAscending
     }
 }
