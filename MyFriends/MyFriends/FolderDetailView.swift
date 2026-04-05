@@ -96,9 +96,9 @@ struct FolderDetailView: View {
             Button("Save") {
                 addSubfolder()
             }
-            .disabled(trimmedSubfolderName.isEmpty)
+            .disabled(trimmedSubfolderName.isEmpty || hasDuplicateSubfolderName)
         } message: {
-            Text("Enter a name for the subfolder.")
+            Text(newSubfolderValidationMessage)
         }
         .alert("Edit Folder", isPresented: $isShowingEditFolderAlert) {
             TextField("Folder name", text: $editedFolderName)
@@ -110,9 +110,9 @@ struct FolderDetailView: View {
             Button("Save") {
                 saveFolderEdits()
             }
-            .disabled(trimmedEditedFolderName.isEmpty)
+            .disabled(trimmedEditedFolderName.isEmpty || hasDuplicateEditedFolderName)
         } message: {
-            Text("Update the folder name.")
+            Text(editedFolderValidationMessage)
         }
         .sheet(isPresented: $isShowingContactSheet) { contactSheet }
     }
@@ -227,8 +227,23 @@ struct FolderDetailView: View {
         newSubfolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var newSubfolderValidationMessage: String {
+        duplicateFolderNameMessage(
+            for: trimmedSubfolderName,
+            in: folder
+        ) ?? "Enter a name for the subfolder."
+    }
+
     private var trimmedEditedFolderName: String {
         editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var editedFolderValidationMessage: String {
+        duplicateFolderNameMessage(
+            for: trimmedEditedFolderName,
+            in: folderBeingEdited?.parent,
+            excluding: folderBeingEdited
+        ) ?? "Update the folder name."
     }
 
     private var contactSheetTitle: String {
@@ -262,7 +277,48 @@ struct FolderDetailView: View {
         isShowingAddSubfolderAlert = true
     }
 
+    private var hasDuplicateSubfolderName: Bool {
+        hasDuplicateFolderName(trimmedSubfolderName, in: folder)
+    }
+
+    private var hasDuplicateEditedFolderName: Bool {
+        hasDuplicateFolderName(
+            trimmedEditedFolderName,
+            in: folderBeingEdited?.parent,
+            excluding: folderBeingEdited
+        )
+    }
+
+    private func duplicateFolderNameMessage(
+        for name: String,
+        in parent: Folder?,
+        excluding folder: Folder? = nil
+    ) -> String? {
+        guard hasDuplicateFolderName(name, in: parent, excluding: folder) else {
+            return nil
+        }
+
+        return "A folder with this name already exists here."
+    }
+
+    // Folder names only need to be unique among siblings that share the same parent.
+    private func hasDuplicateFolderName(
+        _ name: String,
+        in parent: Folder?,
+        excluding folder: Folder? = nil
+    ) -> Bool {
+        guard !name.isEmpty else { return false }
+
+        return allFolders.contains { candidate in
+            candidate.parent === parent
+                && candidate !== folder
+                && candidate.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+        }
+    }
+
     private func addSubfolder() {
+        guard !hasDuplicateSubfolderName else { return }
+
         let subfolder = Folder(name: trimmedSubfolderName, parent: folder)
         modelContext.insert(subfolder)
 
@@ -282,6 +338,7 @@ struct FolderDetailView: View {
 
     private func saveFolderEdits() {
         guard let folderBeingEdited else { return }
+        guard !hasDuplicateEditedFolderName else { return }
 
         folderBeingEdited.name = trimmedEditedFolderName
 

@@ -26,6 +26,7 @@ final class Folder {
         self.parent = parent
     }
 
+    // helper variable for computing full path and parent path
     var pathComponents: [String] {
         var components: [String] = [name]
         var currentParent = parent

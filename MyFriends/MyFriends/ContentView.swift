@@ -97,9 +97,9 @@ struct ContentView: View {
                 Button("Save") {
                     addFolder()
                 }
-                .disabled(trimmedFolderName.isEmpty)
+                .disabled(trimmedFolderName.isEmpty || hasDuplicateRootFolderName)
             } message: {
-                Text("Enter a name for the folder.")
+                Text(newFolderValidationMessage)
             }
             .alert("Edit Folder", isPresented: $isShowingEditFolderAlert) {
                 TextField("Folder name", text: $editedFolderName)
@@ -111,9 +111,9 @@ struct ContentView: View {
                 Button("Save") {
                     saveFolderEdits()
                 }
-                .disabled(trimmedEditedFolderName.isEmpty)
+                .disabled(trimmedEditedFolderName.isEmpty || hasDuplicateEditedFolderName)
             } message: {
-                Text("Update the folder name.")
+                Text(editedFolderValidationMessage)
             }
             .searchable(
                 text: $searchText,
@@ -221,6 +221,13 @@ struct ContentView: View {
         newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var newFolderValidationMessage: String {
+        duplicateFolderNameMessage(
+            for: trimmedFolderName,
+            in: nil
+        ) ?? "Enter a name for the folder."
+    }
+
     @ViewBuilder
     private func searchPlaceholder(_ text: String) -> some View {
         Text(text)
@@ -234,6 +241,14 @@ struct ContentView: View {
         editedFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var editedFolderValidationMessage: String {
+        duplicateFolderNameMessage(
+            for: trimmedEditedFolderName,
+            in: folderBeingEdited?.parent,
+            excluding: folderBeingEdited
+        ) ?? "Update the folder name."
+    }
+
     // MARK: - Actions
 
     private func startAddingFolder() {
@@ -241,7 +256,47 @@ struct ContentView: View {
         isShowingAddFolderAlert = true
     }
 
+    private var hasDuplicateRootFolderName: Bool {
+        hasDuplicateFolderName(trimmedFolderName, in: nil)
+    }
+
+    private var hasDuplicateEditedFolderName: Bool {
+        hasDuplicateFolderName(
+            trimmedEditedFolderName,
+            in: folderBeingEdited?.parent,
+            excluding: folderBeingEdited
+        )
+    }
+
+    private func duplicateFolderNameMessage(
+        for name: String,
+        in parent: Folder?,
+        excluding folder: Folder? = nil
+    ) -> String? {
+        guard hasDuplicateFolderName(name, in: parent, excluding: folder) else {
+            return nil
+        }
+
+        return "A folder with this name already exists here."
+    }
+
+    private func hasDuplicateFolderName(
+        _ name: String,
+        in parent: Folder?,
+        excluding folder: Folder? = nil
+    ) -> Bool {
+        guard !name.isEmpty else { return false }
+
+        return folders.contains { candidate in
+            candidate.parent === parent
+                && candidate !== folder
+                && candidate.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+        }
+    }
+
     private func addFolder() {
+        guard !hasDuplicateRootFolderName else { return }
+
         let folder = Folder(name: trimmedFolderName)
         modelContext.insert(folder)
 
@@ -261,6 +316,7 @@ struct ContentView: View {
 
     private func saveFolderEdits() {
         guard let folderBeingEdited else { return }
+        guard !hasDuplicateEditedFolderName else { return }
 
         folderBeingEdited.name = trimmedEditedFolderName
 
